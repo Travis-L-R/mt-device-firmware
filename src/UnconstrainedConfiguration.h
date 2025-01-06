@@ -23,7 +23,7 @@
 
 // Set all controls used for DATA_LOGGING_MODE
 #ifdef DATA_LOGGING_MODE
-#define UPLINK_ALL_CHANNELS
+#define UPLINK_ALL_CHANNELS  // Uplink packets decrypted, regardless of whether uplink is a known channel or not 
 #define UPLINK_ALL_PACKETS  // Uplink all packets, whether decoded, PKI encrypted, or not.
 
 #ifndef TRANSGRESS_OK_TO_MQTT
