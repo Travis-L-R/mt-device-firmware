@@ -600,6 +600,8 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
 {
     if (mp_encrypted.via_mqtt)
         return; // Don't send messages that came from MQTT back into MQTT
+
+#ifndef UPLINK_ALL_CHANNELS
     bool uplinkEnabled = false;
     for (int i = 0; i <= 7; i++) {
         if (channels.getByIndex(i).settings.uplink_enabled)
@@ -607,6 +609,7 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     }
     if (!uplinkEnabled)
         return; // no channels have an uplink enabled
+#endif
     auto &ch = channels.getByIndex(chIndex);
 
     // mp_decoded will not be decoded when it's PKI encrypted and not directed to us
@@ -635,10 +638,18 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     }
     // Either encrypted packet (we couldn't decrypt) is marked as pki_encrypted, or we could decode the PKI encrypted packet
     bool isPKIEncrypted = mp_encrypted.pki_encrypted || mp_decoded.pki_encrypted;
+
+#ifndef UPLINK_ALL_CHANNELS
     // If it was to a channel, check uplink enabled, else must be pki_encrypted
     if (!(ch.settings.uplink_enabled || isPKIEncrypted))
         return;
+
     const char *channelId = isPKIEncrypted ? "PKI" : channels.getGlobalId(chIndex);
+#else
+    //Lookup channelID for MQTT topic. Use "PKI" if couldn't decrypt, use "Unknown" if could decrypt but we don't have the channel in our device
+    const char *channelId = isPKIEncrypted ? "PKI" : (chIndex == -1 ? "Unknown" : channels.getGlobalId(chIndex));
+#endif
+
 
     LOG_DEBUG("MQTT onSend - Publish ");
     const meshtastic_MeshPacket *p;
