@@ -20,11 +20,11 @@
 // WARNING: this may reveal DMs and private channel info.
 #define DATA_LOGGING_MODE
 
-
 // Set all controls used for DATA_LOGGING_MODE
 #ifdef DATA_LOGGING_MODE
 #define UPLINK_ALL_CHANNELS  // Uplink packets decrypted, regardless of whether uplink is a known channel or not (*exceptions available)
 #define UPLINK_ALL_PACKETS  // Uplink all packets, whether decoded, PKI encrypted, or not.
+#define UPLINK_REPEAT_PACKETS // Uplink packets that we've seen before
 
 #ifndef TRANSGRESS_OK_TO_MQTT
 #define TRANSGRESS_OK_TO_MQTT

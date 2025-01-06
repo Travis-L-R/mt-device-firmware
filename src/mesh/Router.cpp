@@ -568,6 +568,14 @@ NodeNum Router::getNodeNum()
  */
 void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
+    #ifdef UPLINK_REPEAT_PACKETS
+    // with UPLINK_REPEAT_PACKETS
+    bool shouldFilter = shouldFilterReceived(p);
+    if (shouldFilter) {
+        LOG_DEBUG("Incoming msg will be filtered, from 0x%x", p->from);
+        //return;
+    }
+    #endif
     bool skipHandle = false;
     // Also, we should set the time from the ISR and it should have msec level resolution
     p->rx_time = getValidTime(RTCQualityFromNet); // store the arrival timestamp for the phone
@@ -612,7 +620,12 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         printPacket("packet decoding failed or skipped (no PSK?)", p);
     }
 
-    // call modules here
+#ifdef UPLINK_REPEAT_PACKETS
+    if (shouldFilter) {
+        // prevent rebroadcasting of this packet that would normally have been filtered
+        cancelSending(p->from, p->id);
+    } 
+#endif
     if (!skipHandle) {
         MeshModule::callModules(*p, src);
 
@@ -663,11 +676,13 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
+#ifndef UPLINK_ALL_PACKETS
     if (p->from == NODENUM_BROADCAST) {
         LOG_DEBUG("Ignore msg from broadcast address");
         packetPool.release(p);
         return;
     }
+#endif
 
     if (config.lora.ignore_mqtt && p->via_mqtt) {
         LOG_DEBUG("Msg came in via MQTT from 0x%x", p->from);
@@ -675,11 +690,13 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
+#ifndef UPLINK_REPEAT_PACKETS
     if (shouldFilterReceived(p)) {
         LOG_DEBUG("Incoming msg was filtered from 0x%x", p->from);
         packetPool.release(p);
         return;
     }
+#endif
 
     // Note: we avoid calling shouldFilterReceived if we are supposed to ignore certain nodes - because some overrides might
     // cache/learn of the existence of nodes (i.e. FloodRouter) that they should not
