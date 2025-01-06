@@ -17,13 +17,14 @@
 #endif
 
 // In DATA_LOGGING_MODE, remove additional limitations so that we can get more info for analytics
+// WARNING: this may reveal DMs and private channel info.
 #define DATA_LOGGING_MODE
 
 
 // Set all controls used for DATA_LOGGING_MODE
 #ifdef DATA_LOGGING_MODE
-
 #define UPLINK_ALL_CHANNELS
+#define UPLINK_ALL_PACKETS  // Uplink all packets, whether decoded, PKI encrypted, or not.
 
 #ifndef TRANSGRESS_OK_TO_MQTT
 #define TRANSGRESS_OK_TO_MQTT

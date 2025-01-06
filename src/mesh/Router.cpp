@@ -621,10 +621,16 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         // us (because we would be able to decrypt it)
         if (!decoded && moduleConfig.mqtt.encryption_enabled && p->channel == 0x00 && !isBroadcast(p->to) && !isToUs(p))
             p_encrypted->pki_encrypted = true;
+
         // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
+#ifndef UPLINK_ALL_PACKETS
         if ((decoded || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled && !isFromUs(p) && mqtt)
+#else:
+        if ((decoded || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled && !isFromUs(p) && mqtt)
+#endif
             mqtt->onSend(*p_encrypted, *p, p->channel);
 #endif
+
     }
 
     packetPool.release(p_encrypted); // Release the encrypted packet
