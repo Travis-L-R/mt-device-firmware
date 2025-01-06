@@ -12,5 +12,6 @@
 // Set all controls used for UNCONSTRAINED_MODE
 #ifdef UNCONSTRAINED_MODE
 #define ALLOW_NEIGHBOR_INFO_ON_DEFAULT_CHANNEL
+#define ALLOW_NODENUM_ASSIGNMENT  // allow devices to set the nodenum on outgoing packets
 #endif
 

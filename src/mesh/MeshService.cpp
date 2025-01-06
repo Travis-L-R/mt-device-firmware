@@ -173,7 +173,9 @@ void MeshService::handleToRadio(meshtastic_MeshPacket &p)
         return;
     }
 #endif
+#ifndef ALLOW_NODENUM_ASSIGNMENT
     p.from = 0; // We don't let phones assign nodenums to their sent messages
+#endif
 
     if (p.id == 0)
         p.id = generatePacketId(); // If the phone didn't supply one, then pick one
