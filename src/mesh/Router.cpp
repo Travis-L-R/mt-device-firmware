@@ -625,7 +625,7 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
 #ifndef UPLINK_ALL_PACKETS
         if ((decoded || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled && !isFromUs(p) && mqtt)
-#else:
+#else
         if ((decoded || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled && !isFromUs(p) && mqtt)
 #endif
             mqtt->onSend(*p_encrypted, *p, p->channel);
