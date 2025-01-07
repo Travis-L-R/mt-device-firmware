@@ -623,9 +623,18 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         // prevent rebroadcasting of this packet that would normally have been filtered
         cancelSending(p->from, p->id);
     } 
-#endif
+
+    if (!skipHandle) {
+        // don't have the other modules do anything if this should have been filtered
+        // todo: check that this doesn't break things, like position blurring
+        if (!shouldFilter) {
+            MeshModule::callModules(*p, src);
+        }
+
+#else 
     if (!skipHandle) {
         MeshModule::callModules(*p, src);
+#endif
 
 #if !MESHTASTIC_EXCLUDE_MQTT
         // Mark as pki_encrypted if it is not yet decoded and MQTT encryption is also enabled, hash matches and it's a DM not to
