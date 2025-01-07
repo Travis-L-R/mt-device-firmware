@@ -175,6 +175,11 @@ void MeshService::handleToRadio(meshtastic_MeshPacket &p)
 #endif
 #if !USERPREFS_ALLOW_NODENUM_ASSIGNMENT
     p.from = 0; // We don't let phones assign nodenums to their sent messages
+#else
+    // We do let phones assign nodenums, but if it's "from" us it should be set to zero because bits expect it to be zero when it is from us (e.g. AdminModule)
+    if (p.from == nodeDB->getNodeNum()) {
+        p.from = 0;
+    }
 #endif
 
     if (p.id == 0)
