@@ -1,4 +1,15 @@
 {
+
+  "USERPREFS_ENABLE_NEIGHBOR_INFO_BY_DEFAULT": "true",
+  "USERPREFS_ALLOW_NEIGHBOR_INFO_ON_DEFAULT_CHANNEL": "true",
+  "USERPREFS_ALLOW_NODENUM_ASSIGNMENT": "true",  // Allow devices to set the nodenum on outgoing packets
+  "USERPREFS_DISABLE_TRACEROUTE_THROTTLE": "true",
+  "USERPREFS_DISABLE_POSITION_THROTTLE": "true",
+  "USERPREFS_TRANSGRESS_OK_TO_MQTT": "true",  // Disregard OK_TO_MQTT bitfield flag when not using default MQTT
+  "USERPREFS_UPLINK_ALL_CHANNELS": "true",  // Uplink packets decrypted, regardless of whether uplink is a known channel or not (*exceptions applu)
+  "USERPREFS_UPLINK_ALL_PACKETS": "true",  // Uplink all packets, whether decoded, PKI encrypted, or not.
+  "USERPREFS_UPLINK_REPEAT_PACKETS": "true",   // Uplink (but don't re-transmit) packets that we've seen before
+
   // Option to make selected areas send more imprecise position data
   // "USERPREFS_APPLY_POSITION_MASKS": "true",
   // "USERPREFS_POSITION_MASK_0_LAT": "-12.3456789",

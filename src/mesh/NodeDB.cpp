@@ -696,7 +696,7 @@ void NodeDB::installDefaultModuleConfig()
     moduleConfig.mqtt.encryption_enabled = true;
 
     moduleConfig.has_neighbor_info = true;
-    #ifndef ENABLE_NEIGHBOR_INFO_BY_DEFAULT
+    #if !USERPREFS_ENABLE_NEIGHBOR_INFO_BY_DEFAULT
     moduleConfig.neighbor_info.enabled = false;
     #else
     moduleConfig.neighbor_info.enabled = true;

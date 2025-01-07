@@ -601,7 +601,7 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     if (mp_encrypted.via_mqtt)
         return; // Don't send messages that came from MQTT back into MQTT
 
-#ifndef UPLINK_ALL_CHANNELS
+#if USERPREFS_UPLINK_ALL_CHANNELS
     bool uplinkEnabled = false;
     for (int i = 0; i <= 7; i++) {
         if (channels.getByIndex(i).settings.uplink_enabled)
@@ -617,7 +617,7 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
         // For uplinking other's packets, check if it's not OK to MQTT or if it's an older packet without the bitfield
         bool dontUplink = !mp_decoded.decoded.has_bitfield || !(mp_decoded.decoded.bitfield & BITFIELD_OK_TO_MQTT_MASK);
         
-#ifdef TRANSGRESS_OK_TO_MQTT
+#if USERPREFS_TRANSGRESS_OK_TO_MQTT
         // Ignore OK_TO_MQTT mask, except for the default server
         dontUplink &= isConfiguredForDefaultServer;
 #endif
@@ -639,7 +639,7 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     // Either encrypted packet (we couldn't decrypt) is marked as pki_encrypted, or we could decode the PKI encrypted packet
     bool isPKIEncrypted = mp_encrypted.pki_encrypted || mp_decoded.pki_encrypted;
 
-#ifndef UPLINK_ALL_CHANNELS
+#if USERPREFS_UPLINK_ALL_CHANNELS
     // If it was to a channel, check uplink enabled, else must be pki_encrypted
     if (!(ch.settings.uplink_enabled || isPKIEncrypted))
         return;
@@ -650,7 +650,7 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
         return;
 #endif
 
-#ifndef UPLINK_ALL_CHANNELS
+#if !USERPREFS_UPLINK_ALL_CHANNELS
     const char *channelId = isPKIEncrypted ? "PKI" : channels.getGlobalId(chIndex);
 #else
     //Lookup channelID for MQTT topic.

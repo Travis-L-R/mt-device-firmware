@@ -638,7 +638,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
     
     if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && lastPortNumToRadio[p.decoded.portnum] &&
         Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], THIRTY_SECONDS_MS)) {
-#ifndef DISABLE_TRACEROUTE_THROTTLE
+#if !USERPREFS_DISABLE_TRACEROUTE_THROTTLE
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
         sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "TraceRoute can only be sent once every 30 seconds");
         meshtastic_QueueStatus qs = router->getQueueStatus();
@@ -647,7 +647,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
 #endif
     } else if (p.decoded.portnum == meshtastic_PortNum_POSITION_APP && lastPortNumToRadio[p.decoded.portnum] &&
                Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], FIVE_SECONDS_MS)) {
-#ifndef DISABLE_POSITION_THROTTLE
+#if !USERPREFS_DISABLE_POSITION_THROTTLE
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
         meshtastic_QueueStatus qs = router->getQueueStatus();
         service->sendQueueStatusToPhone(qs, 0, p.id);

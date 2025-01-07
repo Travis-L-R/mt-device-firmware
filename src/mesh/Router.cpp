@@ -568,12 +568,10 @@ NodeNum Router::getNodeNum()
  */
 void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
-    #ifdef UPLINK_REPEAT_PACKETS
-    // with UPLINK_REPEAT_PACKETS
+    #if USERPREFS_UPLINK_REPEAT_PACKETS
     bool shouldFilter = shouldFilterReceived(p);
     if (shouldFilter) {
         LOG_DEBUG("Incoming msg will be filtered, from 0x%x", p->from);
-        //return;
     }
     #endif
     bool skipHandle = false;
@@ -620,7 +618,7 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         printPacket("packet decoding failed or skipped (no PSK?)", p);
     }
 
-#ifdef UPLINK_REPEAT_PACKETS
+#if USERPREFS_UPLINK_REPEAT_PACKETS
     if (shouldFilter) {
         // prevent rebroadcasting of this packet that would normally have been filtered
         cancelSending(p->from, p->id);
@@ -636,7 +634,7 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
             p_encrypted->pki_encrypted = true;
 
         // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
-#ifndef UPLINK_ALL_PACKETS
+#if USERPREFS_UPLINK_ALL_PACKETS
         if ((decoded || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled && !isFromUs(p) && mqtt)
 #else
         if ((decoded || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled && !isFromUs(p) && mqtt)
@@ -676,7 +674,7 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
-#ifndef UPLINK_ALL_PACKETS
+#if USERPREFS_UPLINK_ALL_PACKETS
     if (p->from == NODENUM_BROADCAST) {
         LOG_DEBUG("Ignore msg from broadcast address");
         packetPool.release(p);
@@ -690,7 +688,7 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
-#ifndef UPLINK_REPEAT_PACKETS
+#if !USERPREFS_UPLINK_REPEAT_PACKETS
     if (shouldFilterReceived(p)) {
         LOG_DEBUG("Incoming msg was filtered from 0x%x", p->from);
         packetPool.release(p);
