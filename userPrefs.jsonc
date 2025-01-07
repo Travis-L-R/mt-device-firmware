@@ -4,7 +4,7 @@
   "USERPREFS_ALLOW_NEIGHBOR_INFO_ON_DEFAULT_CHANNEL": "true",
   "USERPREFS_ALLOW_NODENUM_ASSIGNMENT": "true",  // Allow devices to set the nodenum on outgoing packets
   "USERPREFS_DISABLE_TRACEROUTE_THROTTLE": "true",
-  "USERPREFS_DISABLE_POSITION_THROTTLE": "true",
+  "USERPREFS_DISABLE_POSITION_THROTTLE": "false",
   "USERPREFS_TRANSGRESS_OK_TO_MQTT": "true",  // Disregard OK_TO_MQTT bitfield flag when not using default MQTT
   "USERPREFS_UPLINK_ALL_CHANNELS": "true",  // Uplink packets decrypted, regardless of whether uplink is a known channel or not (*exceptions applu)
   "USERPREFS_UPLINK_ALL_PACKETS": "true",  // Uplink all packets, whether decoded, PKI encrypted, or not.
