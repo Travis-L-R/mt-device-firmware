@@ -104,6 +104,8 @@ for pref in userPrefs:
         pref_flags.append("-D" + pref + "=" + userPrefs[pref])
     elif userPrefs[pref].replace(".", "").isdigit():
         pref_flags.append("-D" + pref + "=" + userPrefs[pref])
+    elif len(userPrefs[pref]) > 0 and userPrefs[pref][0] == "-" and userPrefs[pref][1:].replace(".", "").isdigit():
+        pref_flags.append("-D" + pref + "=" + userPrefs[pref])
     elif userPrefs[pref] == "true" or userPrefs[pref] == "false":
         pref_flags.append("-D" + pref + "=" + userPrefs[pref])
     elif userPrefs[pref].startswith("meshtastic_"):
