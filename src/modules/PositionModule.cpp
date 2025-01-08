@@ -213,7 +213,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_0_LAT  
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_0_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_0_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_0_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_0_BITS));
-        if (USERPREFS_POSITION_MASK_0_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_0_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_0_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_0_BITS;
@@ -222,7 +222,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_1_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_1_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_1_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_1_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_1_BITS));
-        if (USERPREFS_POSITION_MASK_1_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_1_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_1_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_1_BITS;
@@ -231,7 +231,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_2_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_2_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_2_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_2_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_2_BITS));
-        if (USERPREFS_POSITION_MASK_2_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_2_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_2_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_2_BITS;
@@ -240,7 +240,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_3_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_3_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_3_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_3_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_3_BITS));
-        if (USERPREFS_POSITION_MASK_3_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_3_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_3_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_3_BITS;
@@ -249,7 +249,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_4_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_4_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_4_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_4_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_4_BITS));
-        if (USERPREFS_POSITION_MASK_4_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_4_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_4_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_4_BITS;
@@ -258,7 +258,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_5_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_5_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_5_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_5_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_5_BITS));
-        if (USERPREFS_POSITION_MASK_5_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_5_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_5_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_5_BITS;
@@ -267,7 +267,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_6_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_6_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_6_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_6_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_6_BITS));
-        if (USERPREFS_POSITION_MASK_6_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_6_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_6_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_6_BITS;
@@ -276,7 +276,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_7_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_7_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_7_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_7_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_7_BITS));
-        if (USERPREFS_POSITION_MASK_7_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_7_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_7_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_7_BITS;
@@ -285,7 +285,7 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
 #ifdef USERPREFS_POSITION_MASK_8_LAT
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_8_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_8_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_8_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_8_BITS));
-        if (USERPREFS_POSITION_MASK_8_BITS < precision && (localPosition.latitude_i & masked_lat) == masked_lat && (localPosition.longitude_i & masked_lon) == masked_lon) {
+        if (USERPREFS_POSITION_MASK_8_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
             p.latitude_i = masked_lat;
             p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_8_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_8_BITS;
