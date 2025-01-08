@@ -207,7 +207,7 @@ meshtastic_MeshPacket *PositionModule::allocReply()
     uint32_t masked_lon;
     uint32_t lowest_precision = UINT32_MAX;
 
-if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision == 32) {
+if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
 
     // Adjust further if positioned within any of the masked areas
 #ifdef USERPREFS_POSITION_MASK_0_LAT  
