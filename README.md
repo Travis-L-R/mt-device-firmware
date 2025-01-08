@@ -50,6 +50,8 @@ By default, these masks apply for *all* channels. The additional USERPREFS_MASK_
 
 **Warning**: These masks are only applied to position packets. They are not applied to MQTT map reports.
 
+**Note**: You don't have to specify the actual lat/lon of the location you are looking to obscure for the mask, just any lat/lon within the bit-precision rectangle that is created by the mask.
+
 **Note**: Since the default MQTT server drops high-precision position data, using these masks may have an unintended effect: positions away from your specified locations may not be seen on maps that use data from the default server, but positions within the masked areas might.
 
 
