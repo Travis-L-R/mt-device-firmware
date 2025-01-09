@@ -18,7 +18,7 @@ Modify the **userPrefs.jsonc** file to uncomment and set the options that you wa
 
 * USERPREFS_ALLOW_NODENUM_ASSIGNMENT: Set to true if you have some app that needs to be able to set node IDs on sent packets. E.g. [meshpipe](https://github.com/armooo/meshpipe).
 * USERPREFS_DISABLE_TRACEROUTE_THROTTLE: Removes the restriction on sending traceroutes too frequently.
-* USERPREFS_DISABLE_POSITION_THROTTLE": Removes the restriction on sending position data too frequently.
+* USERPREFS_DISABLE_POSITION_THROTTLE: Removes the restriction on sending position data too frequently.
 * USERPREFS_TRANSGRESS_OK_TO_MQTT: Disregards the OK_TO_MQTT bitfield flag (unless you're using the default MQTT server, in which case it will still respect it).
 * USERPREFS_UPLINK_ALL_CHANNELS: Normally only decrypted packets that match a channel are uplinked to MQTT. This option will uplink all decrypted channels, even if unknown. Though if it's a known channel and you don't have uplink_enabled then it shouldn't uplink it (so that you can still have private, non-uplinked channels).
 * USERPREFS_UPLINK_ALL_PACKETS: Undecrypted packets to broadcast are not normally uplinked, nor are messages "from broadcast". This option allows that.
@@ -55,7 +55,11 @@ By default, these masks apply for *all* channels. The additional USERPREFS_MASK_
 **Note**: Since the default MQTT server drops high-precision position data, using these masks may have an unintended effect: positions away from your specified locations may not be seen on maps that use data from the default server, but positions within the masked areas might.
 
 
+### Other settings
 
-
+Best not to change these unnecessarily:
+* USERPREFS_MAX_CHANNEL_UTIL_PERCENT: Override for the upper limit on channel util at which nodes will not transmit non-critical messages. 
+* USERPREFS_POLITE_CHANNEL_UTIL_PERCENT: Override for the lower limit (applies to certain node roles).
+* USERPREFS_POLITE_DUTY_CYCLE_PERCENT: Override for the limit on airtime usage.
 
 
