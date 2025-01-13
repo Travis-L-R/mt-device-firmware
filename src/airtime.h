@@ -67,9 +67,21 @@ class AirTime : private concurrency::OSThread
     uint8_t lastUtilPeriod = 0;
     uint8_t lastUtilPeriodTX = 0;
     uint32_t secSinceBoot = 0;
+  #ifndef USERPREFS_MAX_CHANNEL_UTIL_PERCENT
     uint8_t max_channel_util_percent = 40;
+  #else
+   uint8_t max_channel_util_percent = USERPREFS_MAX_CHANNEL_UTIL_PERCENT;
+  #endif
+  #ifndef USERPREFS_POLITE_CHANNEL_UTIL_PERCENT
     uint8_t polite_channel_util_percent = 25;
+  #else
+    uint8_t polite_channel_util_percent = USERPREFS_POLITE_CHANNEL_UTIL_PERCENT;
+  #endif
+  #ifndef USERPREFS_POLITE_DUTY_CYCLE_PERCENT
     uint8_t polite_duty_cycle_percent = 50; // half of Duty Cycle allowance is ok for metadata
+  #else
+    uint8_t polite_duty_cycle_percent = USERPREFS_POLITE_DUTY_CYCLE_PERCENT;
+  #endif
 
     struct airtimeStruct {
         uint32_t periodTX[PERIODS_TO_LOG];     // AirTime transmitted

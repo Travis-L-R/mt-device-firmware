@@ -10,6 +10,11 @@
   "USERPREFS_UPLINK_ALL_PACKETS": "true",  // Uplink all packets, whether decoded, PKI encrypted, or not
   "USERPREFS_UPLINK_REPEAT_PACKETS": "true",   // Uplink (but don't re-transmit/handle) packets that we've seen before
 
+  // Overrides for channel limits
+   "USERPREFS_MAX_CHANNEL_UTIL_PERCENT": "40", 
+   "USERPREFS_POLITE_CHANNEL_UTIL_PERCENT": "25",
+   "USERPREFS_POLITE_DUTY_CYCLE_PERCENT": "50",
+
   // Option to make selected areas send more imprecise position data
   // "USERPREFS_APPLY_POSITION_MASKS": "true",
   // "USERPREFS_MASK_POS_EVEN_WHEN_PRECISE": "true",  // If false, will only apply masks when precision is < 32
