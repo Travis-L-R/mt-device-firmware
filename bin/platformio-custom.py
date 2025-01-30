@@ -102,7 +102,7 @@ pref_flags = []
 for pref in userPrefs:
     if userPrefs[pref].startswith("{"):
         pref_flags.append("-D" + pref + "=" + userPrefs[pref])
-    elif userPrefs[pref].replace(".", "").isdigit():
+    elif userPrefs[pref].lstrip("-").replace(".", "").isdigit():
         pref_flags.append("-D" + pref + "=" + userPrefs[pref])
     elif len(userPrefs[pref]) > 0 and userPrefs[pref][0] == "-" and userPrefs[pref][1:].replace(".", "").isdigit():
         pref_flags.append("-D" + pref + "=" + userPrefs[pref])
