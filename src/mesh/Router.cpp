@@ -569,7 +569,8 @@ NodeNum Router::getNodeNum()
 void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
     #if USERPREFS_UPLINK_REPEAT_PACKETS
-    bool shouldFilter = shouldFilterReceived(p);
+    // replicate the disabled part of the filtering of perhapsHandleReceived if the source is from the radio
+    bool shouldFilter = src == RX_SRC_RADIO && shouldFilterReceived(p);
     if (shouldFilter) {
         LOG_DEBUG("Incoming msg will be filtered, from 0x%x", p->from);
     }
