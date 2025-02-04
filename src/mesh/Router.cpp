@@ -620,10 +620,11 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
     }
 
 #if USERPREFS_UPLINK_REPEAT_PACKETS
+/*
     if (shouldFilter) {
         // prevent rebroadcasting of this packet that would normally have been filtered
         cancelSending(p->from, p->id);
-    } 
+    } */
 
     if (!skipHandle) {
         // don't have the other modules do anything if this should have been filtered
