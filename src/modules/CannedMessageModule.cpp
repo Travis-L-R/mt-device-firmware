@@ -287,7 +287,7 @@ int CannedMessageModule::handleInputEvent(const InputEvent *event)
             break;
         case INPUT_BROKER_MSG_SEND_PING: // fn+space send network ping like double press does
             service->refreshLocalMeshNode();
-            if (service->trySendPosition(NODENUM_BROADCAST, true)) {
+            if (service->trySendPosition(NODENUM_BROADCAST_GROUP, true)) {
                 showTemporaryMessage("Position \nUpdate Sent");
             } else {
                 showTemporaryMessage("Node Info \nUpdate Sent");
@@ -483,7 +483,7 @@ int32_t CannedMessageModule::runOnce()
 #if defined(USE_VIRTUAL_KEYBOARD)
                     sendText(this->dest, indexChannels[this->channel], this->messages[this->currentMessageIndex], true);
 #else
-                    sendText(NODENUM_BROADCAST, channels.getPrimaryIndex(), this->messages[this->currentMessageIndex], true);
+                    sendText(NODENUM_BROADCAST_GROUP, channels.getPrimaryIndex(), this->messages[this->currentMessageIndex], true);
 #endif
                 }
                 this->runState = CANNED_MESSAGE_RUN_STATE_SENDING_ACTIVE;
@@ -539,7 +539,7 @@ int32_t CannedMessageModule::runOnce()
         case INPUT_BROKER_MSG_LEFT:
             if (this->destSelect == CANNED_MESSAGE_DESTINATION_TYPE_NODE) {
                 size_t numMeshNodes = nodeDB->getNumMeshNodes();
-                if (this->dest == NODENUM_BROADCAST) {
+                if (isBroadcast(this->dest)) {
                     this->dest = nodeDB->getNodeNum();
                 }
                 for (unsigned int i = 0; i < numMeshNodes; i++) {
@@ -550,7 +550,7 @@ int32_t CannedMessageModule::runOnce()
                     }
                 }
                 if (this->dest == nodeDB->getNodeNum()) {
-                    this->dest = NODENUM_BROADCAST;
+                    this->dest = NODENUM_BROADCAST_GROUP;
                 }
             } else if (this->destSelect == CANNED_MESSAGE_DESTINATION_TYPE_CHANNEL) {
                 for (unsigned int i = 0; i < channels.getNumChannels(); i++) {
@@ -574,7 +574,7 @@ int32_t CannedMessageModule::runOnce()
         case INPUT_BROKER_MSG_RIGHT:
             if (this->destSelect == CANNED_MESSAGE_DESTINATION_TYPE_NODE) {
                 size_t numMeshNodes = nodeDB->getNumMeshNodes();
-                if (this->dest == NODENUM_BROADCAST) {
+                if (isBroadcast(this->dest)) {
                     this->dest = nodeDB->getNodeNum();
                 }
                 for (unsigned int i = 0; i < numMeshNodes; i++) {
@@ -585,7 +585,7 @@ int32_t CannedMessageModule::runOnce()
                     }
                 }
                 if (this->dest == nodeDB->getNodeNum()) {
-                    this->dest = NODENUM_BROADCAST;
+                    this->dest = NODENUM_BROADCAST_GROUP;
                 }
             } else if (this->destSelect == CANNED_MESSAGE_DESTINATION_TYPE_CHANNEL) {
                 for (unsigned int i = 0; i < channels.getNumChannels(); i++) {

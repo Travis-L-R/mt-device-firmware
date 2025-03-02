@@ -646,7 +646,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
         service->sendQueueStatusToPhone(qs, 0, p.id);
         return false;
 #endif
-    } else if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && isBroadcast(p.to) && p.hop_limit > 0) {
+    } else if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && (p.to == NODENUM_BROADCAST || p.to == NODENUM_BROADCAST_NO_LORA) && p.hop_limit > 0) {
         sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "Multi-hop traceroute to broadcast address is not allowed");
         meshtastic_QueueStatus qs = router->getQueueStatus();
         service->sendQueueStatusToPhone(qs, 0, p.id);

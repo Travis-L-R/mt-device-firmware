@@ -39,7 +39,7 @@ class AirQualityTelemetryModule : private concurrency::OSThread, public Protobuf
     /**
      * Send our Telemetry into the mesh
      */
-    bool sendTelemetry(NodeNum dest = NODENUM_BROADCAST, bool wantReplies = false);
+    bool sendTelemetry(NodeNum dest = NODENUM_BROADCAST_GROUP, bool wantReplies = false);
 
   private:
     Adafruit_PM25AQI aqi;

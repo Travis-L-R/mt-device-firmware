@@ -57,7 +57,7 @@ class AudioModule : public SinglePortModule, public Observable<const UIFrameEven
     /**
      * Send our payload into the mesh
      */
-    void sendPayload(NodeNum dest = NODENUM_BROADCAST, bool wantReplies = false);
+    void sendPayload(NodeNum dest = NODENUM_BROADCAST_GROUP, bool wantReplies = false);
 
   protected:
     int encode_frame_num = 0;

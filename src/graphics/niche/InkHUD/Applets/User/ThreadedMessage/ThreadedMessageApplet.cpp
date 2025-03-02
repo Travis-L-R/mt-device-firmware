@@ -194,7 +194,7 @@ int InkHUD::ThreadedMessageApplet::onReceiveTextMessage(const meshtastic_MeshPac
         return 0;
 
     // Abort if message was a DM
-    if (p->to != NODENUM_BROADCAST)
+    if (!isBroadcast(p->to))
         return 0;
 
     // Abort if messages was an "emoji reaction"

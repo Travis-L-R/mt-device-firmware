@@ -45,7 +45,7 @@ class EnvironmentTelemetryModule : private concurrency::OSThread, public Protobu
     /**
      * Send our Telemetry into the mesh
      */
-    bool sendTelemetry(NodeNum dest = NODENUM_BROADCAST, bool wantReplies = false);
+    bool sendTelemetry(NodeNum dest = NODENUM_BROADCAST_GROUP, bool wantReplies = false);
 
     virtual AdminMessageHandleResult handleAdminMessageForModule(const meshtastic_MeshPacket &mp,
                                                                  meshtastic_AdminMessage *request,

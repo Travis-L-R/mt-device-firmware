@@ -52,7 +52,7 @@ int32_t StoreForwardModule::runOnce()
             sf.which_variant = meshtastic_StoreAndForward_heartbeat_tag;
             sf.variant.heartbeat.period = heartbeatInterval;
             sf.variant.heartbeat.secondary = 0; // TODO we always have one primary router for now
-            storeForwardModule->sendMessage(NODENUM_BROADCAST, sf);
+            storeForwardModule->sendMessage(NODENUM_BROADCAST_GROUP, sf);
         }
         return (this->packetTimeMax);
     }
@@ -138,7 +138,7 @@ uint32_t StoreForwardModule::getNumAvailablePackets(NodeNum dest, uint32_t last_
         if (this->packetHistory[i].time && (this->packetHistory[i].time > last_time)) {
             // Client is only interested in packets not from itself and only in broadcast packets or packets towards it.
             if (this->packetHistory[i].from != dest &&
-                (this->packetHistory[i].to == NODENUM_BROADCAST || this->packetHistory[i].to == dest)) {
+                (isBroadcast(this->packetHistory[i].to) || this->packetHistory[i].to == dest)) {
                 count++;
             }
         }
@@ -241,7 +241,7 @@ meshtastic_MeshPacket *StoreForwardModule::preparePayload(NodeNum dest, uint32_t
                 to the packetHistoryTXQueue structure.
                 Client not interested in packets from itself and only in broadcast packets or packets towards it. */
             if (this->packetHistory[i].from != dest &&
-                (this->packetHistory[i].to == NODENUM_BROADCAST || this->packetHistory[i].to == dest)) {
+                (isBroadcast(this->packetHistory[i].to)|| this->packetHistory[i].to == dest)) {
 
                 meshtastic_MeshPacket *p = allocDataPacket();
 
@@ -266,7 +266,7 @@ meshtastic_MeshPacket *StoreForwardModule::preparePayload(NodeNum dest, uint32_t
                     sf.which_variant = meshtastic_StoreAndForward_text_tag;
                     sf.variant.text.size = this->packetHistory[i].payload_size;
                     memcpy(sf.variant.text.bytes, this->packetHistory[i].payload, this->packetHistory[i].payload_size);
-                    if (this->packetHistory[i].to == NODENUM_BROADCAST) {
+                    if (isBroadcast(this->packetHistory[i].to)) {
                         sf.rr = meshtastic_StoreAndForward_RequestResponse_ROUTER_TEXT_BROADCAST;
                     } else {
                         sf.rr = meshtastic_StoreAndForward_RequestResponse_ROUTER_TEXT_DIRECT;

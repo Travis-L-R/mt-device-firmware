@@ -429,7 +429,7 @@ void PositionModule::sendOurPosition()
 
     // If we changed channels, ask everyone else for their latest info
     LOG_INFO("Send pos@%x:6 to mesh (wantReplies=%d)", localPosition.timestamp, requestReplies);
-    sendOurPosition(NODENUM_BROADCAST, requestReplies);
+    sendOurPosition(NODENUM_BROADCAST_GROUP, requestReplies);
 }
 
 void PositionModule::sendOurPosition(NodeNum dest, bool wantReplies, uint8_t channel)

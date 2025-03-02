@@ -49,7 +49,7 @@ class SerialModuleRadio : public MeshModule
     /**
      * Send our payload into the mesh
      */
-    void sendPayload(NodeNum dest = NODENUM_BROADCAST, bool wantReplies = false);
+    void sendPayload(NodeNum dest = NODENUM_BROADCAST_GROUP, bool wantReplies = false);
 
   protected:
     virtual meshtastic_MeshPacket *allocReply() override;

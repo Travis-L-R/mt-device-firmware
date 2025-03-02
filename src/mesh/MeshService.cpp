@@ -233,6 +233,20 @@ ErrorCode MeshService::sendQueueStatusToPhone(const meshtastic_QueueStatus &qs, 
 
 void MeshService::sendToMesh(meshtastic_MeshPacket *p, RxSource src, bool ccToPhone)
 {
+    // replace internal broadcast placeholder
+    if (p->to == NODENUM_BROADCAST_GROUP) {
+        
+        #ifdef USERPREFS_GROUP_ADDRESS_1
+            LOG_WARN("Got NODENUM_BROADCAST_GROUP, switching to USERPREFS_GROUP_ADDRESS_1");
+                p->to = USERPREFS_GROUP_ADDRESS_1;
+        #else
+            LOG_WARN("Got NODENUM_BROADCAST_GROUP, switching to NODENUM_BROADCAST");
+                p->to = NODENUM_BROADCAST;
+        #endif
+            } else if (p->to == NODENUM_BROADCAST)
+                LOG_INFO("Got NODENUM_BROADCAST");
+        
+
     uint32_t mesh_packet_id = p->id;
     nodeDB->updateFrom(*p); // update our local DB for this packet (because phone might have sent position packets etc...)
 
@@ -282,6 +296,20 @@ bool MeshService::trySendPosition(NodeNum dest, bool wantReplies)
 
 void MeshService::sendToPhone(meshtastic_MeshPacket *p)
 {
+    // replace internal broadcast placeholder
+    if (p->to == NODENUM_BROADCAST_GROUP) {
+        
+#ifdef USERPREFS_GROUP_ADDRESS_1
+    LOG_WARN("Got NODENUM_BROADCAST_GROUP, switching to USERPREFS_GROUP_ADDRESS_1");
+        p->to = USERPREFS_GROUP_ADDRESS_1;
+#else
+    LOG_WARN("Got NODENUM_BROADCAST_GROUP, switching to NODENUM_BROADCAST");
+        p->to = NODENUM_BROADCAST;
+#endif
+    } else if (p->to == NODENUM_BROADCAST)
+        LOG_INFO("Got NODENUM_BROADCAST");
+
+
     perhapsDecode(p);
 
 #ifdef ARCH_ESP32

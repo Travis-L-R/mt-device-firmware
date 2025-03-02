@@ -397,7 +397,43 @@ bool isToUs(const meshtastic_MeshPacket *p)
 
 bool isBroadcast(uint32_t dest)
 {
-    return dest == NODENUM_BROADCAST || dest == NODENUM_BROADCAST_NO_LORA;
+
+    if (dest == NODENUM_BROADCAST || dest == NODENUM_BROADCAST_NO_LORA || dest == NODENUM_BROADCAST_GROUP)
+        return true;
+#ifdef USERPREFS_GROUP_ADDRESS_1
+    else if (dest == USERPREFS_GROUP_ADDRESS_1)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_2
+    else if (dest == USERPREFS_GROUP_ADDRESS_2)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_3
+    else if (dest == USERPREFS_GROUP_ADDRESS_3)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_4
+    else if (dest == USERPREFS_GROUP_ADDRESS_4)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_5
+    else if (dest == USERPREFS_GROUP_ADDRESS_5)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_6
+    else if (dest == USERPREFS_GROUP_ADDRESS_6)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_7
+    else if (dest == USERPREFS_GROUP_ADDRESS_7)
+        return true;
+#endif
+#ifdef USERPREFS_GROUP_ADDRESS_7
+    else if (dest == USERPREFS_GROUP_ADDRESS_8)
+        return true;
+#endif
+    else
+        return false;
 }
 
 bool NodeDB::resetRadioConfig(bool factory_reset, bool is_fresh_install)

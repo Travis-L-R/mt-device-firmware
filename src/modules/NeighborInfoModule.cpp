@@ -128,7 +128,7 @@ int32_t NeighborInfoModule::runOnce()
     if (moduleConfig.neighbor_info.transmit_over_lora &&
 #endif
         airTime->isTxAllowedChannelUtil(true) && airTime->isTxAllowedAirUtil()) {
-        sendNeighborInfo(NODENUM_BROADCAST, false);
+        sendNeighborInfo(NODENUM_BROADCAST_GROUP, false);
     } else {
         sendNeighborInfo(NODENUM_BROADCAST_NO_LORA, false);
     }

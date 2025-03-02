@@ -32,7 +32,7 @@ int32_t DeviceTelemetryModule::runOnce()
     } else if (service->isToPhoneQueueEmpty()) {
         // Just send to phone when it's not our time to send to mesh yet
         // Only send while queue is empty (phone assumed connected)
-        sendTelemetry(NODENUM_BROADCAST, true);
+        sendTelemetry(NODENUM_BROADCAST_GROUP, true);
         if (lastSentStatsToPhone == 0 || (uptimeLastMs - lastSentStatsToPhone) >= sendStatsToPhoneIntervalMs) {
             sendLocalStatsToPhone();
             lastSentStatsToPhone = uptimeLastMs;
@@ -157,7 +157,7 @@ meshtastic_Telemetry DeviceTelemetryModule::getLocalStatsTelemetry()
 void DeviceTelemetryModule::sendLocalStatsToPhone()
 {
     meshtastic_MeshPacket *p = allocDataProtobuf(getLocalStatsTelemetry());
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_BROADCAST_GROUP;  // todo: not sure about whether this should be NODENUM_BROADCAST_GROUP OR NODENUM_BROADCAST
     p->decoded.want_response = false;
     p->priority = meshtastic_MeshPacket_Priority_BACKGROUND;
 

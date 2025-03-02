@@ -141,12 +141,12 @@ class CannedMessageModule : public SinglePortModule, public Observable<const UIF
     char payload = 0x00;
     unsigned int cursor = 0;
     String freetext = ""; // Text Buffer for Freetext Editor
-    NodeNum dest = NODENUM_BROADCAST;
+    NodeNum dest = NODENUM_BROADCAST_GROUP;
     ChannelIndex channel = 0;
     cannedMessageDestinationType destSelect = CANNED_MESSAGE_DESTINATION_TYPE_NONE;
     uint8_t numChannels = 0;
     ChannelIndex indexChannels[MAX_NUM_CHANNELS] = {0};
-    NodeNum incoming = NODENUM_BROADCAST;
+    NodeNum incoming = NODENUM_BROADCAST_GROUP;
     bool ack = false;           // True means ACK, false means NAK (error_reason != NONE)
     bool waitingForAck = false; // Are currently interested in routing packets?
     float lastRxSnr = 0;

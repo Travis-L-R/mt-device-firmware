@@ -58,7 +58,7 @@ class StoreForwardModule : private concurrency::OSThread, public ProtobufModule<
     /**
      * Send our payload into the mesh
      */
-    bool sendPayload(NodeNum dest = NODENUM_BROADCAST, uint32_t packetHistory_index = 0);
+    bool sendPayload(NodeNum dest = NODENUM_BROADCAST_GROUP, uint32_t packetHistory_index = 0);
     meshtastic_MeshPacket *preparePayload(NodeNum dest, uint32_t packetHistory_index, bool local = false);
     void sendMessage(NodeNum dest, const meshtastic_StoreAndForward &payload);
     void sendMessage(NodeNum dest, meshtastic_StoreAndForward_RequestResponse rr);

@@ -123,7 +123,7 @@ meshtastic_MeshPacket *Router::allocForSending()
 
     p->which_payload_variant = meshtastic_MeshPacket_decoded_tag; // Assume payload is decoded at start.
     p->from = nodeDB->getNodeNum();
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_BROADCAST_GROUP;
     p->hop_limit = Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit);
     p->id = generatePacketId();
     p->rx_time =

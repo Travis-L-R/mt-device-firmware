@@ -81,7 +81,7 @@ int32_t HealthTelemetryModule::runOnce()
                    (service->isToPhoneQueueEmpty())) {
             // Just send to phone when it's not our time to send to mesh yet
             // Only send while queue is empty (phone assumed connected)
-            sendTelemetry(NODENUM_BROADCAST, true);
+            sendTelemetry(NODENUM_BROADCAST_GROUP, true);
             lastSentToPhone = millis();
         }
     }

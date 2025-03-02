@@ -252,7 +252,7 @@ void SerialModule::sendTelemetry(meshtastic_Telemetry m)
     p->decoded.portnum = meshtastic_PortNum_TELEMETRY_APP;
     p->decoded.payload.size =
         pb_encode_to_bytes(p->decoded.payload.bytes, sizeof(p->decoded.payload.bytes), &meshtastic_Telemetry_msg, &m);
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_BROADCAST_GROUP;
     p->decoded.want_response = false;
     if (config.device.role == meshtastic_Config_DeviceConfig_Role_SENSOR) {
         p->want_ack = true;
