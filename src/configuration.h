@@ -110,11 +110,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Define if screen should be mirrored left to right
 // #define SCREEN_MIRROR
 
-// Define BUTTON_PIN to ensure button setup is always done
-#ifndef BUTTON_PIN
-#define BUTTON_PIN (-1)
-#endif
-
 // I2C Keyboards (M5Stack, RAK14004, T-Deck)
 #define CARDKB_ADDR 0x5F
 #define TDECK_KB_ADDR 0x55
@@ -157,6 +152,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MLX90614_ADDR_DEF 0x5A
 #define CGRADSENS_ADDR 0x66
 #define LTR390UV_ADDR 0x53
+#define XPOWERS_AXP192_AXP2101_ADDRESS 0x34 // same adress as TCA8418
 
 // -----------------------------------------------------------------------------
 // ACCELEROMETER
@@ -175,6 +171,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // LED
 // -----------------------------------------------------------------------------
 #define NCP5623_ADDR 0x38
+#define LP5562_ADDR 0x30
 
 // -----------------------------------------------------------------------------
 // Security
@@ -298,6 +295,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef HW_VENDOR
 #error HW_VENDOR must be defined
+#endif
+
+// Support multiple RGB LED configuration
+#if defined(HAS_NCP5623) || defined(HAS_LP5562) || defined(RGBLED_RED) || defined(HAS_NEOPIXEL) || defined(UNPHONE)
+#define HAS_RGB_LED
 #endif
 
 // -----------------------------------------------------------------------------

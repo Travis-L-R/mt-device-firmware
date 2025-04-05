@@ -628,8 +628,13 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
          meshtastic_Config_PositionConfig_PositionFlags_SPEED | meshtastic_Config_PositionConfig_PositionFlags_HEADING |
          meshtastic_Config_PositionConfig_PositionFlags_DOP | meshtastic_Config_PositionConfig_PositionFlags_SATINVIEW);
 
+// Set default value for 'Mesh via UDP'
+#if HAS_UDP_MULTICAST
 #ifdef USERPREFS_NETWORK_ENABLED_PROTOCOLS
     config.network.enabled_protocols = USERPREFS_NETWORK_ENABLED_PROTOCOLS;
+#else
+    config.network.enabled_protocols = 1;
+#endif
 #endif
 
 #ifdef USERPREFS_NETWORK_WIFI_ENABLED
@@ -684,7 +689,7 @@ void NodeDB::initConfigIntervals()
 
     config.display.screen_on_secs = default_screen_on_secs;
 
-#if defined(T_WATCH_S3) || defined(T_DECK) || defined(MESH_TAB) || defined(RAK14014)
+#if defined(T_WATCH_S3) || defined(T_DECK) || defined(UNPHONE) || defined(MESH_TAB) || defined(RAK14014)
     config.power.is_power_saving = true;
     config.display.screen_on_secs = 30;
     config.power.wait_bluetooth_secs = 30;
@@ -1061,8 +1066,8 @@ void NodeDB::loadFromDisk()
     // if (state != LoadFileResult::LOAD_SUCCESS) {
     //    installDefaultDeviceState(); // Our in RAM copy might now be corrupt
     //} else {
-    if (devicestate.version < DEVICESTATE_MIN_VER) {
-        LOG_WARN("Devicestate %d is old, discard", devicestate.version);
+    if ((state != LoadFileResult::LOAD_SUCCESS) || (devicestate.version < DEVICESTATE_MIN_VER)) {
+        LOG_WARN("Devicestate %d is old or invalid, discard", devicestate.version);
         installDefaultDeviceState();
     } else {
         LOG_INFO("Loaded saved devicestate version %d", devicestate.version);
