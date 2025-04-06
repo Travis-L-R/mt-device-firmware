@@ -601,7 +601,7 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
     #if USERPREFS_UPLINK_REPEAT_PACKETS
     // replicate the disabled part of the filtering of perhapsHandleReceived if the source is from the radio
-    bool shouldFilter = src == RX_SRC_RADIO && shouldFilterReceived(p);
+    bool shouldFilter = src == RX_SRC_RADIO && (p->from == NODENUM_BROADCAST || shouldFilterReceived(p));
     if (shouldFilter) {
         LOG_DEBUG("Incoming msg will be filtered, from 0x%x", p->from);
     }
@@ -677,9 +677,11 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 
         // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
 #if !USERPREFS_UPLINK_ALL_PACKETS
-        if ((decodedState == DecodeState::DECODE_SUCCESS || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled)
+        if ((decodedState == DecodeState::DECODE_SUCCESS || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled &&
+            !isFromUs(p) && mqtt)
 #else
-        if ((decodedState == DecodeState::DECODE_SUCCESS || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled)
+        if ((decodedState == DecodeState::DECODE_SUCCESS || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled &&
+            !isFromUs(p) && mqtt)
 #endif
             mqtt->onSend(*p_encrypted, *p, p->channel);
 #endif
