@@ -38,6 +38,29 @@ Allocator<meshtastic_MeshPacket> &packetPool = staticPool;
 
 static uint8_t bytes[MAX_LORA_PAYLOAD_LEN + 1] __attribute__((__aligned__));
 
+/** Attempt to find a node number among our configure destinations */
+meshtastic_DestinationsConfig_MeshDestination *findDestinationForAddress(uint32_t n){
+    // Disregard reserved addresses
+    if (n < NUM_RESERVED) {
+        return nullptr;
+    }
+
+    meshtastic_DestinationsConfig_MeshDestination *dest = nullptr;
+
+    // Loop through, try to find a destination
+    for (uint16_t i=0; i<config.destinations.destinations_count; i++) {
+        dest = &config.destinations.destinations[i];
+
+        // if we have a match, finish and return the index as 
+        if (n == dest->num)
+        {
+            LOG_DEBUG("Set found destination for node 0x%x at %u", n, i);
+            return dest;
+        }
+    }
+    return nullptr;
+}
+
 /**
  * Constructor
  *
@@ -258,9 +281,26 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     p->from = getFrom(p);
 
     p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // set the relayer to us
-    // If we are the original transmitter, set the hop limit with which we start
-    if (isFromUs(p))
+
+    // check whether we have a destination configured for our "to" address
+    meshtastic_DestinationsConfig_MeshDestination *dest = findDestinationForAddress(p->to);
+
+    if (isFromUs(p)) {
+        // If we are the original transmitter and we have a destinattion configured with a custom hop limit, adjust it
+        if (dest && dest->has_hop_limit && dest->hop_limit > 0) {
+            LOG_DEBUG("Overriding hop limit %u to %u", p->hop_limit, dest->hop_limit);
+            p->hop_limit = dest->hop_limit;
+        }
+            
+        // Set the hop limit with which we start
         p->hop_start = p->hop_limit;
+    }
+
+    // Update next hop if configured
+    if (dest && dest->has_next_hop && dest->next_hop != 0) {
+        LOG_DEBUG("Overriding next hop %u to %u", p->next_hop, dest->next_hop);
+        p->next_hop = dest->next_hop;
+    }
 
     // If the packet hasn't yet been encrypted, do so now (it might already be encrypted if we are just forwarding it)
 
