@@ -232,6 +232,38 @@ ErrorCode MeshService::sendQueueStatusToPhone(const meshtastic_QueueStatus &qs, 
 
 void MeshService::sendToMesh(meshtastic_MeshPacket *p, RxSource src, bool ccToPhone)
 {
+    // Replace placeholder address with any configured default destination, or the broadcast address
+    if (p->to == NODENUM_PLACEHOLDER && config.has_destinations) {
+        LOG_DEBUG("Handling pkt with NODENUM_PLACEHOLDER");
+        uint32_t destination_num = 0;
+
+        // See if we can find a suitable replacement for the placeholder
+        switch (p->decoded.portnum) {
+            case meshtastic_PortNum_NODEINFO_APP:
+                if (config.destinations.nodeinfo_dest > NUM_RESERVED)
+                    destination_num = config.destinations.nodeinfo_dest;
+                break;
+            case meshtastic_PortNum_TELEMETRY_APP:
+                if (config.destinations.telemetry_dest > NUM_RESERVED)
+                    destination_num = config.destinations.telemetry_dest;
+                break;
+            case meshtastic_PortNum_POSITION_APP:
+                if (config.destinations.position_dest > NUM_RESERVED)
+                    destination_num = config.destinations.position_dest;
+                break;
+            default:
+                break;
+        }
+
+        // Use default destination if none of the other options are available, if it's valid.
+        if (destination_num == 0 && config.destinations.default_dest > NUM_RESERVED)
+            destination_num = config.destinations.default_dest;
+
+        // Update "to" with selected destination
+        if(destination_num)
+            p->to = destination_num;
+    }
+
     // If we still have a placeholder present, set it to broadcast
     if (p->to == NODENUM_PLACEHOLDER) {
         p->to = NODENUM_BROADCAST;

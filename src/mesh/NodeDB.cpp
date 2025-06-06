@@ -994,9 +994,6 @@ void NodeDB::installDefaultDeviceState()
     owner.is_unmessagable = false;
 }
 
-// We reserve a few nodenums for future use
-#define NUM_RESERVED 4
-
 /**
  * get our starting (provisional) nodenum from flash.
  */
