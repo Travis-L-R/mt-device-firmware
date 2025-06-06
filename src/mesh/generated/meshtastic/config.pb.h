@@ -4,6 +4,7 @@
 #ifndef PB_MESHTASTIC_MESHTASTIC_CONFIG_PB_H_INCLUDED
 #define PB_MESHTASTIC_MESHTASTIC_CONFIG_PB_H_INCLUDED
 #include <pb.h>
+#include "meshtastic/destinations.pb.h"
 #include "meshtastic/device_ui.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
@@ -601,6 +602,7 @@ typedef struct _meshtastic_Config {
         meshtastic_Config_SecurityConfig security;
         meshtastic_Config_SessionkeyConfig sessionkey;
         meshtastic_DeviceUIConfig device_ui;
+        meshtastic_DestinationsConfig destinations;
     } payload_variant;
 } meshtastic_Config;
 
@@ -812,6 +814,7 @@ extern "C" {
 #define meshtastic_Config_security_tag           8
 #define meshtastic_Config_sessionkey_tag         9
 #define meshtastic_Config_device_ui_tag          10
+#define meshtastic_Config_destinations_tag       11
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_Config_FIELDLIST(X, a) \
@@ -824,7 +827,8 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,lora,payload_variant.lora), 
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,bluetooth,payload_variant.bluetooth),   7) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,security,payload_variant.security),   8) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,sessionkey,payload_variant.sessionkey),   9) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,device_ui,payload_variant.device_ui),  10)
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,device_ui,payload_variant.device_ui),  10) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,destinations,payload_variant.destinations),  11)
 #define meshtastic_Config_CALLBACK NULL
 #define meshtastic_Config_DEFAULT NULL
 #define meshtastic_Config_payload_variant_device_MSGTYPE meshtastic_Config_DeviceConfig
@@ -837,6 +841,7 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,device_ui,payload_variant.de
 #define meshtastic_Config_payload_variant_security_MSGTYPE meshtastic_Config_SecurityConfig
 #define meshtastic_Config_payload_variant_sessionkey_MSGTYPE meshtastic_Config_SessionkeyConfig
 #define meshtastic_Config_payload_variant_device_ui_MSGTYPE meshtastic_DeviceUIConfig
+#define meshtastic_Config_payload_variant_destinations_MSGTYPE meshtastic_DestinationsConfig
 
 #define meshtastic_Config_DeviceConfig_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    role,              1) \
