@@ -24,7 +24,7 @@ class PaxcounterModule : private concurrency::OSThread, public ProtobufModule<me
   protected:
     struct count_payload_t count_from_libpax = {0, 0, 0};
     virtual int32_t runOnce() override;
-    bool sendInfo(NodeNum dest = NODENUM_BROADCAST);
+    bool sendInfo(NodeNum dest = NODENUM_PLACEHOLDER);
     virtual bool handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshtastic_Paxcount *p) override;
     virtual meshtastic_MeshPacket *allocReply() override;
     bool isActive() { return moduleConfig.paxcounter.enabled && !config.bluetooth.enabled && !config.network.wifi_enabled; }

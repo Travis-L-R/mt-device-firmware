@@ -124,7 +124,7 @@ int32_t NeighborInfoModule::runOnce()
     if (moduleConfig.neighbor_info.transmit_over_lora &&
         (!channels.isDefaultChannel(channels.getPrimaryIndex()) || !RadioInterface::uses_default_frequency_slot) &&
         airTime->isTxAllowedChannelUtil(true) && airTime->isTxAllowedAirUtil()) {
-        sendNeighborInfo(NODENUM_BROADCAST, false);
+        sendNeighborInfo(NODENUM_PLACEHOLDER, false);
     } else {
         sendNeighborInfo(NODENUM_BROADCAST_NO_LORA, false);
     }

@@ -32,7 +32,7 @@ class DeviceTelemetryModule : private concurrency::OSThread, public ProtobufModu
     /**
      * Send our Telemetry into the mesh
      */
-    bool sendTelemetry(NodeNum dest = NODENUM_BROADCAST, bool phoneOnly = false);
+    bool sendTelemetry(NodeNum dest = NODENUM_PLACEHOLDER, bool phoneOnly = false);
 
     /**
      * Get the uptime in seconds

@@ -794,7 +794,7 @@ void MQTT::perhapsReportToMap()
     meshtastic_MeshPacket *mp = packetPool.allocZeroed();
     mp->which_payload_variant = meshtastic_MeshPacket_decoded_tag;
     mp->from = nodeDB->getNodeNum();
-    mp->to = NODENUM_BROADCAST;
+    mp->to = NODENUM_PLACEHOLDER;
     mp->decoded.portnum = meshtastic_PortNum_MAP_REPORT_APP;
 
     // Fill MapReport message

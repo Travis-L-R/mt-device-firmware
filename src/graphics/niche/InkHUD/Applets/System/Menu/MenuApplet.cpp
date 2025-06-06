@@ -147,7 +147,7 @@ void InkHUD::MenuApplet::execute(MenuItem item)
 
     case SEND_PING:
         service->refreshLocalMeshNode();
-        service->trySendPosition(NODENUM_BROADCAST, true);
+        service->trySendPosition(NODENUM_PLACEHOLDER, true);
 
         // Force the next refresh to use FULL, to protect the display, as some users will probably spam this button
         inkhud->forceUpdate(Drivers::EInk::UpdateTypes::FULL);

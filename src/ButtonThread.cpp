@@ -149,7 +149,7 @@ void ButtonThread::switchPage()
 void ButtonThread::sendAdHocPosition()
 {
     service->refreshLocalMeshNode();
-    auto sentPosition = service->trySendPosition(NODENUM_BROADCAST, true);
+    auto sentPosition = service->trySendPosition(NODENUM_PLACEHOLDER, true);
     if (screen) {
         if (sentPosition)
             screen->print("Sent ad-hoc position\n");

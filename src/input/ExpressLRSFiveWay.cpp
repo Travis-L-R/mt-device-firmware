@@ -213,7 +213,7 @@ void ExpressLRSFiveWay::toggleGPS()
 void ExpressLRSFiveWay::sendAdhocPing()
 {
     service->refreshLocalMeshNode();
-    bool sentPosition = service->trySendPosition(NODENUM_BROADCAST, true);
+    bool sentPosition = service->trySendPosition(NODENUM_PLACEHOLDER, true);
 
     // Show custom alert frame, with multi-line centering
     screen->startAlert([sentPosition](OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y) -> void {

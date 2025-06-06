@@ -73,7 +73,7 @@ bool PacketAPI::receivePacket(void)
             if (mr->heartbeat.dummy_field == 1) {
                 if (nodeInfoModule) {
                     LOG_INFO("Broadcasting nodeinfo ping");
-                    nodeInfoModule->sendOurNodeInfo(NODENUM_BROADCAST, true, 0, true);
+                    nodeInfoModule->sendOurNodeInfo(NODENUM_PLACEHOLDER, true, 0, true);
                 }
             } else {
                 LOG_DEBUG("Got client heartbeat");

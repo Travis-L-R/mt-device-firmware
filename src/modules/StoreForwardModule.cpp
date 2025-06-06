@@ -52,7 +52,7 @@ int32_t StoreForwardModule::runOnce()
             sf.which_variant = meshtastic_StoreAndForward_heartbeat_tag;
             sf.variant.heartbeat.period = heartbeatInterval;
             sf.variant.heartbeat.secondary = 0; // TODO we always have one primary router for now
-            storeForwardModule->sendMessage(NODENUM_BROADCAST, sf);
+            storeForwardModule->sendMessage(NODENUM_PLACEHOLDER, sf);
         }
         return (this->packetTimeMax);
     }

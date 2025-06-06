@@ -328,7 +328,7 @@ void PositionModule::sendOurPosition()
 
     // If we changed channels, ask everyone else for their latest info
     LOG_INFO("Send pos@%x:6 to mesh (wantReplies=%d)", localPosition.timestamp, requestReplies);
-    sendOurPosition(NODENUM_BROADCAST, requestReplies);
+    sendOurPosition(NODENUM_PLACEHOLDER, requestReplies);
 }
 
 void PositionModule::sendOurPosition(NodeNum dest, bool wantReplies, uint8_t channel)
@@ -453,7 +453,7 @@ int32_t PositionModule::runOnce()
 void PositionModule::sendLostAndFoundText()
 {
     meshtastic_MeshPacket *p = allocDataPacket();
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_PLACEHOLDER;
     char *message = new char[60];
     sprintf(message, "🚨I'm lost! Lat / Lon: %f, %f\a", (lastGpsLatitude * 1e-7), (lastGpsLongitude * 1e-7));
     p->decoded.portnum = meshtastic_PortNum_TEXT_MESSAGE_APP;

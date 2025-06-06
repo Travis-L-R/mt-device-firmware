@@ -232,6 +232,11 @@ ErrorCode MeshService::sendQueueStatusToPhone(const meshtastic_QueueStatus &qs, 
 
 void MeshService::sendToMesh(meshtastic_MeshPacket *p, RxSource src, bool ccToPhone)
 {
+    // If we still have a placeholder present, set it to broadcast
+    if (p->to == NODENUM_PLACEHOLDER) {
+        p->to = NODENUM_BROADCAST;
+    }
+
     uint32_t mesh_packet_id = p->id;
     nodeDB->updateFrom(*p); // update our local DB for this packet (because phone might have sent position packets etc...)
 

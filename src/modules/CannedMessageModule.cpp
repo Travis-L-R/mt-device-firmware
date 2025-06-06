@@ -287,7 +287,7 @@ int CannedMessageModule::handleInputEvent(const InputEvent *event)
             break;
         case INPUT_BROKER_MSG_SEND_PING: // fn+space send network ping like double press does
             service->refreshLocalMeshNode();
-            if (service->trySendPosition(NODENUM_BROADCAST, true)) {
+            if (service->trySendPosition(NODENUM_PLACEHOLDER, true)) {
                 showTemporaryMessage("Position \nUpdate Sent");
             } else {
                 showTemporaryMessage("Node Info \nUpdate Sent");

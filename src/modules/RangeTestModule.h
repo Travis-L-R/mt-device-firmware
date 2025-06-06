@@ -37,7 +37,7 @@ class RangeTestModuleRadio : public SinglePortModule
     /**
      * Send our payload into the mesh
      */
-    void sendPayload(NodeNum dest = NODENUM_BROADCAST, bool wantReplies = false);
+    void sendPayload(NodeNum dest = NODENUM_PLACEHOLDER, bool wantReplies = false);
 
     /**
      * Append range test data to the file on the Filesystem

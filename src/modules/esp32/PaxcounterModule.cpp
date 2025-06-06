@@ -31,7 +31,7 @@ PaxcounterModule::PaxcounterModule()
  * Send the Pax information to the mesh if we got new data from libpax.
  * This is called periodically from our runOnce() method and will actually send the data to the mesh
  * if libpax updated it since the last transmission through the callback.
- * @param dest - destination node (usually NODENUM_BROADCAST)
+ * @param dest - destination node (usually NODENUM_BROADCAST/NODENUM_PLACEHOLDER)
  * @return false if sending is unnecessary, true if information was sent
  */
 bool PaxcounterModule::sendInfo(NodeNum dest)
@@ -100,7 +100,7 @@ int32_t PaxcounterModule::runOnce()
                                 0);
             libpax_counter_start();
         } else {
-            sendInfo(NODENUM_BROADCAST);
+            sendInfo(NODENUM_PLACEHOLDER);
         }
         return Default::getConfiguredOrDefaultMsScaled(moduleConfig.paxcounter.paxcounter_update_interval,
                                                        default_telemetry_broadcast_interval_secs, numOnlineNodes);

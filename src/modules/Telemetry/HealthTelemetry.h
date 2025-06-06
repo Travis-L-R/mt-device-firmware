@@ -46,7 +46,7 @@ class HealthTelemetryModule : private concurrency::OSThread, public ProtobufModu
     /**
      * Send our Telemetry into the mesh
      */
-    bool sendTelemetry(NodeNum dest = NODENUM_BROADCAST, bool wantReplies = false);
+    bool sendTelemetry(NodeNum dest = NODENUM_PLACEHOLDER, bool wantReplies = false);
 
   private:
     bool firstTime = 1;
