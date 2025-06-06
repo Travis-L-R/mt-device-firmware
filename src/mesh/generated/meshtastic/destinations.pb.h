@@ -21,6 +21,17 @@ typedef struct _meshtastic_DestinationsConfig {
     uint32_t position_dest;
 } meshtastic_DestinationsConfig;
 
+typedef struct _meshtastic_DestinationsConfig_MeshDestination {
+    /* The node number for this destination */
+    uint32_t num;
+    /* Alternative hop limit to use for this destination (zero represents default) */
+    bool has_hop_limit;
+    uint8_t hop_limit;
+    /* Manual next hop specification for messages to this node (zero represents default) */
+    bool has_next_hop;
+    uint8_t next_hop;
+} meshtastic_DestinationsConfig_MeshDestination;
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,13 +39,18 @@ extern "C" {
 
 /* Initializer values for message structs */
 #define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0}
+#define meshtastic_DestinationsConfig_MeshDestination_init_default {0, false, 0, false, 0}
 #define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0}
+#define meshtastic_DestinationsConfig_MeshDestination_init_zero {0, false, 0, false, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_DestinationsConfig_default_dest_tag 1
 #define meshtastic_DestinationsConfig_nodeinfo_dest_tag 2
 #define meshtastic_DestinationsConfig_telemetry_dest_tag 3
 #define meshtastic_DestinationsConfig_position_dest_tag 4
+#define meshtastic_DestinationsConfig_MeshDestination_num_tag 1
+#define meshtastic_DestinationsConfig_MeshDestination_hop_limit_tag 2
+#define meshtastic_DestinationsConfig_MeshDestination_next_hop_tag 3
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_DestinationsConfig_FIELDLIST(X, a) \
@@ -45,13 +61,23 @@ X(a, STATIC,   SINGULAR, UINT32,   position_dest,     4)
 #define meshtastic_DestinationsConfig_CALLBACK NULL
 #define meshtastic_DestinationsConfig_DEFAULT NULL
 
+#define meshtastic_DestinationsConfig_MeshDestination_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   num,               1) \
+X(a, STATIC,   OPTIONAL, UINT32,   hop_limit,         2) \
+X(a, STATIC,   OPTIONAL, UINT32,   next_hop,          3)
+#define meshtastic_DestinationsConfig_MeshDestination_CALLBACK NULL
+#define meshtastic_DestinationsConfig_MeshDestination_DEFAULT NULL
+
 extern const pb_msgdesc_t meshtastic_DestinationsConfig_msg;
+extern const pb_msgdesc_t meshtastic_DestinationsConfig_MeshDestination_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define meshtastic_DestinationsConfig_fields &meshtastic_DestinationsConfig_msg
+#define meshtastic_DestinationsConfig_MeshDestination_fields &meshtastic_DestinationsConfig_MeshDestination_msg
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_MAX_SIZE meshtastic_DestinationsConfig_size
+#define meshtastic_DestinationsConfig_MeshDestination_size 12
 #define meshtastic_DestinationsConfig_size       24
 
 #ifdef __cplusplus

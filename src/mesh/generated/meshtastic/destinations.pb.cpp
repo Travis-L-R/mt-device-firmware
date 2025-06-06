@@ -9,4 +9,7 @@
 PB_BIND(meshtastic_DestinationsConfig, meshtastic_DestinationsConfig, AUTO)
 
 
+PB_BIND(meshtastic_DestinationsConfig_MeshDestination, meshtastic_DestinationsConfig_MeshDestination, AUTO)
+
+
 
