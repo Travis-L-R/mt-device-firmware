@@ -93,6 +93,9 @@ PB_BIND(meshtastic_resend_chunks, meshtastic_resend_chunks, AUTO)
 PB_BIND(meshtastic_ChunkedPayloadResponse, meshtastic_ChunkedPayloadResponse, AUTO)
 
 
+PB_BIND(meshtastic_LeapData, meshtastic_LeapData, AUTO)
+
+
 
 
 

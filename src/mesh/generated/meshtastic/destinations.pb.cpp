@@ -6,7 +6,7 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
-PB_BIND(meshtastic_DestinationsConfig, meshtastic_DestinationsConfig, AUTO)
+PB_BIND(meshtastic_DestinationsConfig, meshtastic_DestinationsConfig, 2)
 
 
 PB_BIND(meshtastic_DestinationsConfig_MeshDestination, meshtastic_DestinationsConfig_MeshDestination, AUTO)

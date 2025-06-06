@@ -661,42 +661,6 @@ typedef struct _meshtastic_Routing {
     };
 } meshtastic_Routing;
 
-typedef PB_BYTES_ARRAY_T(233) meshtastic_Data_payload_t;
-/* (Formerly called SubPacket)
- The payload portion fo a packet, this is the actual bytes that are sent
- inside a radio packet (because from/to are broken out by the comms library) */
-typedef struct _meshtastic_Data {
-    /* Formerly named typ and of type Type */
-    meshtastic_PortNum portnum;
-    /* TODO: REPLACE */
-    meshtastic_Data_payload_t payload;
-    /* Not normally used, but for testing a sender can request that recipient
- responds in kind (i.e. if it received a position, it should unicast back it's position).
- Note: that if you set this on a broadcast you will receive many replies. */
-    bool want_response;
-    /* The address of the destination node.
- This field is is filled in by the mesh radio device software, application
- layer software should never need it.
- RouteDiscovery messages _must_ populate this.
- Other message types might need to if they are doing multihop routing. */
-    uint32_t dest;
-    /* The address of the original sender for this message.
- This field should _only_ be populated for reliable multihop packets (to keep
- packets small). */
-    uint32_t source;
-    /* Only used in routing or response messages.
- Indicates the original message ID that this message is reporting failure on. (formerly called original_id) */
-    uint32_t request_id;
-    /* If set, this message is intened to be a reply to a previously sent message with the defined id. */
-    uint32_t reply_id;
-    /* Defaults to false. If true, then what is in the payload should be treated as an emoji like giving
- a message a heart or poop emoji. */
-    uint32_t emoji;
-    /* Bitfield for extra flags. First use is to indicate that user approves the packet being uploaded to MQTT. */
-    bool has_bitfield;
-    uint8_t bitfield;
-} meshtastic_Data;
-
 typedef PB_BYTES_ARRAY_T(32) meshtastic_KeyVerification_hash1_t;
 typedef PB_BYTES_ARRAY_T(32) meshtastic_KeyVerification_hash2_t;
 /* The actual over-the-mesh message doing KeyVerification */
@@ -748,94 +712,6 @@ typedef struct _meshtastic_MqttClientProxyMessage {
     /* Whether the message should be retained (or not) */
     bool retained;
 } meshtastic_MqttClientProxyMessage;
-
-typedef PB_BYTES_ARRAY_T(256) meshtastic_MeshPacket_encrypted_t;
-typedef PB_BYTES_ARRAY_T(32) meshtastic_MeshPacket_public_key_t;
-/* A packet envelope sent/received over the mesh
- only payload_variant is sent in the payload portion of the LORA packet.
- The other fields are either not sent at all, or sent in the special 16 byte LORA header. */
-typedef struct _meshtastic_MeshPacket {
-    /* The sending node number.
- Note: Our crypto implementation uses this field as well.
- See [crypto](/docs/overview/encryption) for details. */
-    uint32_t from;
-    /* The (immediate) destination for this packet */
-    uint32_t to;
-    /* (Usually) If set, this indicates the index in the secondary_channels table that this packet was sent/received on.
- If unset, packet was on the primary channel.
- A particular node might know only a subset of channels in use on the mesh.
- Therefore channel_index is inherently a local concept and meaningless to send between nodes.
- Very briefly, while sending and receiving deep inside the device Router code, this field instead
- contains the 'channel hash' instead of the index.
- This 'trick' is only used while the payload_variant is an 'encrypted'. */
-    uint8_t channel;
-    pb_size_t which_payload_variant;
-    union {
-        /* TODO: REPLACE */
-        meshtastic_Data decoded;
-        /* TODO: REPLACE */
-        meshtastic_MeshPacket_encrypted_t encrypted;
-    };
-    /* A unique ID for this packet.
- Always 0 for no-ack packets or non broadcast packets (and therefore take zero bytes of space).
- Otherwise a unique ID for this packet, useful for flooding algorithms.
- ID only needs to be unique on a _per sender_ basis, and it only
- needs to be unique for a few minutes (long enough to last for the length of
- any ACK or the completion of a mesh broadcast flood).
- Note: Our crypto implementation uses this id as well.
- See [crypto](/docs/overview/encryption) for details. */
-    uint32_t id;
-    /* The time this message was received by the esp32 (secs since 1970).
- Note: this field is _never_ sent on the radio link itself (to save space) Times
- are typically not sent over the mesh, but they will be added to any Packet
- (chain of SubPacket) sent to the phone (so the phone can know exact time of reception) */
-    uint32_t rx_time;
-    /* *Never* sent over the radio links.
- Set during reception to indicate the SNR of this packet.
- Used to collect statistics on current link quality. */
-    float rx_snr;
-    /* If unset treated as zero (no forwarding, send to direct neighbor nodes only)
- if 1, allow hopping through one node, etc...
- For our usecase real world topologies probably have a max of about 3.
- This field is normally placed into a few of bits in the header. */
-    uint8_t hop_limit;
-    /* This packet is being sent as a reliable message, we would prefer it to arrive at the destination.
- We would like to receive a ack packet in response.
- Broadcasts messages treat this flag specially: Since acks for broadcasts would
- rapidly flood the channel, the normal ack behavior is suppressed.
- Instead, the original sender listens to see if at least one node is rebroadcasting this packet (because naive flooding algorithm).
- If it hears that the odds (given typical LoRa topologies) the odds are very high that every node should eventually receive the message.
- So FloodingRouter.cpp generates an implicit ack which is delivered to the original sender.
- If after some time we don't hear anyone rebroadcast our packet, we will timeout and retransmit, using the regular resend logic.
- Note: This flag is normally sent in a flag bit in the header when sent over the wire */
-    bool want_ack;
-    /* The priority of this message for sending.
- See MeshPacket.Priority description for more details. */
-    meshtastic_MeshPacket_Priority priority;
-    /* rssi of received packet. Only sent to phone for dispay purposes. */
-    int32_t rx_rssi;
-    /* Describe if this message is delayed */
-    meshtastic_MeshPacket_Delayed delayed;
-    /* Describes whether this packet passed via MQTT somewhere along the path it currently took. */
-    bool via_mqtt;
-    /* Hop limit with which the original packet started. Sent via LoRa using three bits in the unencrypted header.
- When receiving a packet, the difference between hop_start and hop_limit gives how many hops it traveled. */
-    uint8_t hop_start;
-    /* Records the public key the packet was encrypted with, if applicable. */
-    meshtastic_MeshPacket_public_key_t public_key;
-    /* Indicates whether the packet was en/decrypted using PKI */
-    bool pki_encrypted;
-    /* Last byte of the node number of the node that should be used as the next hop in routing.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint8_t next_hop;
-    /* Last byte of the node number of the node that will relay/relayed this packet.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint8_t relay_node;
-    /* *Never* sent over the radio links.
- Timestamp after which this packet may be sent.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint32_t tx_after;
-} meshtastic_MeshPacket;
 
 /* The bluetooth to device link:
  Old BTLE protocol docs from TODO, merge in above and make real docs...
@@ -1050,6 +926,197 @@ typedef struct _meshtastic_DeviceMetadata {
     uint32_t excluded_modules;
 } meshtastic_DeviceMetadata;
 
+/* A heartbeat message is sent to the node from the client to keep the connection alive.
+ This is currently only needed to keep serial connections alive, but can be used by any PhoneAPI. */
+typedef struct _meshtastic_Heartbeat {
+    char dummy_field;
+} meshtastic_Heartbeat;
+
+/* RemoteHardwarePins associated with a node */
+typedef struct _meshtastic_NodeRemoteHardwarePin {
+    /* The node_num exposing the available gpio pin */
+    uint32_t node_num;
+    /* The the available gpio pin for usage with RemoteHardware module */
+    bool has_pin;
+    meshtastic_RemoteHardwarePin pin;
+} meshtastic_NodeRemoteHardwarePin;
+
+typedef PB_BYTES_ARRAY_T(228) meshtastic_ChunkedPayload_payload_chunk_t;
+typedef struct _meshtastic_ChunkedPayload {
+    /* The ID of the entire payload */
+    uint32_t payload_id;
+    /* The total number of chunks in the payload */
+    uint16_t chunk_count;
+    /* The current chunk index in the total */
+    uint16_t chunk_index;
+    /* The binary data of the current chunk */
+    meshtastic_ChunkedPayload_payload_chunk_t payload_chunk;
+} meshtastic_ChunkedPayload;
+
+/* Wrapper message for broken repeated oneof support */
+typedef struct _meshtastic_resend_chunks {
+    pb_callback_t chunks;
+} meshtastic_resend_chunks;
+
+/* Responses to a ChunkedPayload request */
+typedef struct _meshtastic_ChunkedPayloadResponse {
+    /* The ID of the entire payload */
+    uint32_t payload_id;
+    pb_size_t which_payload_variant;
+    union {
+        /* Request to transfer chunked payload */
+        bool request_transfer;
+        /* Accept the transfer chunked payload */
+        bool accept_transfer;
+        /* Request missing indexes in the chunked payload */
+        meshtastic_resend_chunks resend_chunks;
+    } payload_variant;
+} meshtastic_ChunkedPayloadResponse;
+
+typedef struct _meshtastic_LeapData {
+    /* The node number of the true "to" address that we are trying to send a packet to via leaps. */
+    uint32_t final_dest;
+    /* The node number of each traversed leap mask is bitwise-OR'd together, and then used as mask to prevent loops. */
+    uint32_t leap_mask;
+    /* The node number of the first leap node that has been traversed on the way to final_dest (if any). (So that a return path can be identified.) */
+    bool has_first_leap;
+    uint32_t first_leap;
+    /* The node number of the last leap node (if any is known) that we might be trying to get to before final_dest. 
+ Can be set by the "from" node or another leap node along the way. */
+    bool has_last_leap;
+    uint32_t last_leap;
+    /* Stores a count of how many hops occured in earlier legs of the leap path. */
+    bool has_prior_hops;
+    uint32_t prior_hops;
+} meshtastic_LeapData;
+
+typedef PB_BYTES_ARRAY_T(233) meshtastic_Data_payload_t;
+/* (Formerly called SubPacket)
+ The payload portion fo a packet, this is the actual bytes that are sent
+ inside a radio packet (because from/to are broken out by the comms library) */
+typedef struct _meshtastic_Data {
+    /* Formerly named typ and of type Type */
+    meshtastic_PortNum portnum;
+    /* TODO: REPLACE */
+    meshtastic_Data_payload_t payload;
+    /* Not normally used, but for testing a sender can request that recipient
+ responds in kind (i.e. if it received a position, it should unicast back it's position).
+ Note: that if you set this on a broadcast you will receive many replies. */
+    bool want_response;
+    /* The address of the destination node.
+ This field is is filled in by the mesh radio device software, application
+ layer software should never need it.
+ RouteDiscovery messages _must_ populate this.
+ Other message types might need to if they are doing multihop routing. */
+    uint32_t dest;
+    /* The address of the original sender for this message.
+ This field should _only_ be populated for reliable multihop packets (to keep
+ packets small). */
+    uint32_t source;
+    /* Only used in routing or response messages.
+ Indicates the original message ID that this message is reporting failure on. (formerly called original_id) */
+    uint32_t request_id;
+    /* If set, this message is intened to be a reply to a previously sent message with the defined id. */
+    uint32_t reply_id;
+    /* Defaults to false. If true, then what is in the payload should be treated as an emoji like giving
+ a message a heart or poop emoji. */
+    uint32_t emoji;
+    /* Bitfield for extra flags. First use is to indicate that user approves the packet being uploaded to MQTT. */
+    bool has_bitfield;
+    uint8_t bitfield;
+    /* Path data for packets sent using leap destinations. */
+    bool has_leap_data;
+    meshtastic_LeapData leap_data;
+} meshtastic_Data;
+
+typedef PB_BYTES_ARRAY_T(256) meshtastic_MeshPacket_encrypted_t;
+typedef PB_BYTES_ARRAY_T(32) meshtastic_MeshPacket_public_key_t;
+/* A packet envelope sent/received over the mesh
+ only payload_variant is sent in the payload portion of the LORA packet.
+ The other fields are either not sent at all, or sent in the special 16 byte LORA header. */
+typedef struct _meshtastic_MeshPacket {
+    /* The sending node number.
+ Note: Our crypto implementation uses this field as well.
+ See [crypto](/docs/overview/encryption) for details. */
+    uint32_t from;
+    /* The (immediate) destination for this packet */
+    uint32_t to;
+    /* (Usually) If set, this indicates the index in the secondary_channels table that this packet was sent/received on.
+ If unset, packet was on the primary channel.
+ A particular node might know only a subset of channels in use on the mesh.
+ Therefore channel_index is inherently a local concept and meaningless to send between nodes.
+ Very briefly, while sending and receiving deep inside the device Router code, this field instead
+ contains the 'channel hash' instead of the index.
+ This 'trick' is only used while the payload_variant is an 'encrypted'. */
+    uint8_t channel;
+    pb_size_t which_payload_variant;
+    union {
+        /* TODO: REPLACE */
+        meshtastic_Data decoded;
+        /* TODO: REPLACE */
+        meshtastic_MeshPacket_encrypted_t encrypted;
+    };
+    /* A unique ID for this packet.
+ Always 0 for no-ack packets or non broadcast packets (and therefore take zero bytes of space).
+ Otherwise a unique ID for this packet, useful for flooding algorithms.
+ ID only needs to be unique on a _per sender_ basis, and it only
+ needs to be unique for a few minutes (long enough to last for the length of
+ any ACK or the completion of a mesh broadcast flood).
+ Note: Our crypto implementation uses this id as well.
+ See [crypto](/docs/overview/encryption) for details. */
+    uint32_t id;
+    /* The time this message was received by the esp32 (secs since 1970).
+ Note: this field is _never_ sent on the radio link itself (to save space) Times
+ are typically not sent over the mesh, but they will be added to any Packet
+ (chain of SubPacket) sent to the phone (so the phone can know exact time of reception) */
+    uint32_t rx_time;
+    /* *Never* sent over the radio links.
+ Set during reception to indicate the SNR of this packet.
+ Used to collect statistics on current link quality. */
+    float rx_snr;
+    /* If unset treated as zero (no forwarding, send to direct neighbor nodes only)
+ if 1, allow hopping through one node, etc...
+ For our usecase real world topologies probably have a max of about 3.
+ This field is normally placed into a few of bits in the header. */
+    uint8_t hop_limit;
+    /* This packet is being sent as a reliable message, we would prefer it to arrive at the destination.
+ We would like to receive a ack packet in response.
+ Broadcasts messages treat this flag specially: Since acks for broadcasts would
+ rapidly flood the channel, the normal ack behavior is suppressed.
+ Instead, the original sender listens to see if at least one node is rebroadcasting this packet (because naive flooding algorithm).
+ If it hears that the odds (given typical LoRa topologies) the odds are very high that every node should eventually receive the message.
+ So FloodingRouter.cpp generates an implicit ack which is delivered to the original sender.
+ If after some time we don't hear anyone rebroadcast our packet, we will timeout and retransmit, using the regular resend logic.
+ Note: This flag is normally sent in a flag bit in the header when sent over the wire */
+    bool want_ack;
+    /* The priority of this message for sending.
+ See MeshPacket.Priority description for more details. */
+    meshtastic_MeshPacket_Priority priority;
+    /* rssi of received packet. Only sent to phone for dispay purposes. */
+    int32_t rx_rssi;
+    /* Describe if this message is delayed */
+    meshtastic_MeshPacket_Delayed delayed;
+    /* Describes whether this packet passed via MQTT somewhere along the path it currently took. */
+    bool via_mqtt;
+    /* Hop limit with which the original packet started. Sent via LoRa using three bits in the unencrypted header.
+ When receiving a packet, the difference between hop_start and hop_limit gives how many hops it traveled. */
+    uint8_t hop_start;
+    /* Records the public key the packet was encrypted with, if applicable. */
+    meshtastic_MeshPacket_public_key_t public_key;
+    /* Indicates whether the packet was en/decrypted using PKI */
+    bool pki_encrypted;
+    /* Last byte of the node number of the node that should be used as the next hop in routing.
+ Set by the firmware internally, clients are not supposed to set this. */
+    uint8_t next_hop;
+    /* Last byte of the node number of the node that will relay/relayed this packet.
+ Set by the firmware internally, clients are not supposed to set this. */
+    uint8_t relay_node;
+    /* *Never* sent over the radio links.
+ Timestamp after which this packet may be sent.
+ Set by the firmware internally, clients are not supposed to set this. */
+    uint32_t tx_after;
+} meshtastic_MeshPacket;
+
 /* Packets from the radio to the phone will appear on the fromRadio characteristic.
  It will support READ and NOTIFY. When a new packet arrives the device will BLE notify?
  It will sit in that descriptor until consumed by the phone,
@@ -1103,12 +1170,6 @@ typedef struct _meshtastic_FromRadio {
     };
 } meshtastic_FromRadio;
 
-/* A heartbeat message is sent to the node from the client to keep the connection alive.
- This is currently only needed to keep serial connections alive, but can be used by any PhoneAPI. */
-typedef struct _meshtastic_Heartbeat {
-    char dummy_field;
-} meshtastic_Heartbeat;
-
 /* Packets/commands to the radio will be written (reliably) to the toRadio characteristic.
  Once the write completes the phone can assume it is handled. */
 typedef struct _meshtastic_ToRadio {
@@ -1136,47 +1197,6 @@ typedef struct _meshtastic_ToRadio {
         meshtastic_Heartbeat heartbeat;
     };
 } meshtastic_ToRadio;
-
-/* RemoteHardwarePins associated with a node */
-typedef struct _meshtastic_NodeRemoteHardwarePin {
-    /* The node_num exposing the available gpio pin */
-    uint32_t node_num;
-    /* The the available gpio pin for usage with RemoteHardware module */
-    bool has_pin;
-    meshtastic_RemoteHardwarePin pin;
-} meshtastic_NodeRemoteHardwarePin;
-
-typedef PB_BYTES_ARRAY_T(228) meshtastic_ChunkedPayload_payload_chunk_t;
-typedef struct _meshtastic_ChunkedPayload {
-    /* The ID of the entire payload */
-    uint32_t payload_id;
-    /* The total number of chunks in the payload */
-    uint16_t chunk_count;
-    /* The current chunk index in the total */
-    uint16_t chunk_index;
-    /* The binary data of the current chunk */
-    meshtastic_ChunkedPayload_payload_chunk_t payload_chunk;
-} meshtastic_ChunkedPayload;
-
-/* Wrapper message for broken repeated oneof support */
-typedef struct _meshtastic_resend_chunks {
-    pb_callback_t chunks;
-} meshtastic_resend_chunks;
-
-/* Responses to a ChunkedPayload request */
-typedef struct _meshtastic_ChunkedPayloadResponse {
-    /* The ID of the entire payload */
-    uint32_t payload_id;
-    pb_size_t which_payload_variant;
-    union {
-        /* Request to transfer chunked payload */
-        bool request_transfer;
-        /* Accept the transfer chunked payload */
-        bool accept_transfer;
-        /* Request missing indexes in the chunked payload */
-        meshtastic_resend_chunks resend_chunks;
-    } payload_variant;
-} meshtastic_ChunkedPayloadResponse;
 
 
 #ifdef __cplusplus
@@ -1267,12 +1287,13 @@ extern "C" {
 
 
 
+
 /* Initializer values for message structs */
 #define meshtastic_Position_init_default         {false, 0, false, 0, false, 0, 0, _meshtastic_Position_LocSource_MIN, _meshtastic_Position_AltSource_MIN, 0, 0, false, 0, false, 0, 0, 0, 0, 0, false, 0, false, 0, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_User_init_default             {"", "", "", {0}, _meshtastic_HardwareModel_MIN, 0, _meshtastic_Config_DeviceConfig_Role_MIN, {0, {0}}, false, 0}
 #define meshtastic_RouteDiscovery_init_default   {0, {0, 0, 0, 0, 0, 0, 0, 0}, 0, {0, 0, 0, 0, 0, 0, 0, 0}, 0, {0, 0, 0, 0, 0, 0, 0, 0}, 0, {0, 0, 0, 0, 0, 0, 0, 0}}
 #define meshtastic_Routing_init_default          {0, {meshtastic_RouteDiscovery_init_default}}
-#define meshtastic_Data_init_default             {_meshtastic_PortNum_MIN, {0, {0}}, 0, 0, 0, 0, 0, 0, false, 0}
+#define meshtastic_Data_init_default             {_meshtastic_PortNum_MIN, {0, {0}}, 0, 0, 0, 0, 0, 0, false, 0, false, meshtastic_LeapData_init_default}
 #define meshtastic_KeyVerification_init_default  {0, {0, {0}}, {0, {0}}}
 #define meshtastic_Waypoint_init_default         {0, false, 0, false, 0, 0, 0, "", "", 0}
 #define meshtastic_MqttClientProxyMessage_init_default {"", 0, {{0, {0}}}, 0}
@@ -1297,11 +1318,12 @@ extern "C" {
 #define meshtastic_ChunkedPayload_init_default   {0, 0, 0, {0, {0}}}
 #define meshtastic_resend_chunks_init_default    {{{NULL}, NULL}}
 #define meshtastic_ChunkedPayloadResponse_init_default {0, 0, {0}}
+#define meshtastic_LeapData_init_default         {0, 0, false, 0, false, 0, false, 0}
 #define meshtastic_Position_init_zero            {false, 0, false, 0, false, 0, 0, _meshtastic_Position_LocSource_MIN, _meshtastic_Position_AltSource_MIN, 0, 0, false, 0, false, 0, 0, 0, 0, 0, false, 0, false, 0, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_User_init_zero                {"", "", "", {0}, _meshtastic_HardwareModel_MIN, 0, _meshtastic_Config_DeviceConfig_Role_MIN, {0, {0}}, false, 0}
 #define meshtastic_RouteDiscovery_init_zero      {0, {0, 0, 0, 0, 0, 0, 0, 0}, 0, {0, 0, 0, 0, 0, 0, 0, 0}, 0, {0, 0, 0, 0, 0, 0, 0, 0}, 0, {0, 0, 0, 0, 0, 0, 0, 0}}
 #define meshtastic_Routing_init_zero             {0, {meshtastic_RouteDiscovery_init_zero}}
-#define meshtastic_Data_init_zero                {_meshtastic_PortNum_MIN, {0, {0}}, 0, 0, 0, 0, 0, 0, false, 0}
+#define meshtastic_Data_init_zero                {_meshtastic_PortNum_MIN, {0, {0}}, 0, 0, 0, 0, 0, 0, false, 0, false, meshtastic_LeapData_init_zero}
 #define meshtastic_KeyVerification_init_zero     {0, {0, {0}}, {0, {0}}}
 #define meshtastic_Waypoint_init_zero            {0, false, 0, false, 0, 0, 0, "", "", 0}
 #define meshtastic_MqttClientProxyMessage_init_zero {"", 0, {{0, {0}}}, 0}
@@ -1326,6 +1348,7 @@ extern "C" {
 #define meshtastic_ChunkedPayload_init_zero      {0, 0, 0, {0, {0}}}
 #define meshtastic_resend_chunks_init_zero       {{{NULL}, NULL}}
 #define meshtastic_ChunkedPayloadResponse_init_zero {0, 0, {0}}
+#define meshtastic_LeapData_init_zero            {0, 0, false, 0, false, 0, false, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_Position_latitude_i_tag       1
@@ -1367,15 +1390,6 @@ extern "C" {
 #define meshtastic_Routing_route_request_tag     1
 #define meshtastic_Routing_route_reply_tag       2
 #define meshtastic_Routing_error_reason_tag      3
-#define meshtastic_Data_portnum_tag              1
-#define meshtastic_Data_payload_tag              2
-#define meshtastic_Data_want_response_tag        3
-#define meshtastic_Data_dest_tag                 4
-#define meshtastic_Data_source_tag               5
-#define meshtastic_Data_request_id_tag           6
-#define meshtastic_Data_reply_id_tag             7
-#define meshtastic_Data_emoji_tag                8
-#define meshtastic_Data_bitfield_tag             9
 #define meshtastic_KeyVerification_nonce_tag     1
 #define meshtastic_KeyVerification_hash1_tag     2
 #define meshtastic_KeyVerification_hash2_tag     3
@@ -1391,26 +1405,6 @@ extern "C" {
 #define meshtastic_MqttClientProxyMessage_data_tag 2
 #define meshtastic_MqttClientProxyMessage_text_tag 3
 #define meshtastic_MqttClientProxyMessage_retained_tag 4
-#define meshtastic_MeshPacket_from_tag           1
-#define meshtastic_MeshPacket_to_tag             2
-#define meshtastic_MeshPacket_channel_tag        3
-#define meshtastic_MeshPacket_decoded_tag        4
-#define meshtastic_MeshPacket_encrypted_tag      5
-#define meshtastic_MeshPacket_id_tag             6
-#define meshtastic_MeshPacket_rx_time_tag        7
-#define meshtastic_MeshPacket_rx_snr_tag         8
-#define meshtastic_MeshPacket_hop_limit_tag      9
-#define meshtastic_MeshPacket_want_ack_tag       10
-#define meshtastic_MeshPacket_priority_tag       11
-#define meshtastic_MeshPacket_rx_rssi_tag        12
-#define meshtastic_MeshPacket_delayed_tag        13
-#define meshtastic_MeshPacket_via_mqtt_tag       14
-#define meshtastic_MeshPacket_hop_start_tag      15
-#define meshtastic_MeshPacket_public_key_tag     16
-#define meshtastic_MeshPacket_pki_encrypted_tag  17
-#define meshtastic_MeshPacket_next_hop_tag       18
-#define meshtastic_MeshPacket_relay_node_tag     19
-#define meshtastic_MeshPacket_tx_after_tag       20
 #define meshtastic_NodeInfo_num_tag              1
 #define meshtastic_NodeInfo_user_tag             2
 #define meshtastic_NodeInfo_position_tag         3
@@ -1476,6 +1470,52 @@ extern "C" {
 #define meshtastic_DeviceMetadata_hasRemoteHardware_tag 10
 #define meshtastic_DeviceMetadata_hasPKC_tag     11
 #define meshtastic_DeviceMetadata_excluded_modules_tag 12
+#define meshtastic_NodeRemoteHardwarePin_node_num_tag 1
+#define meshtastic_NodeRemoteHardwarePin_pin_tag 2
+#define meshtastic_ChunkedPayload_payload_id_tag 1
+#define meshtastic_ChunkedPayload_chunk_count_tag 2
+#define meshtastic_ChunkedPayload_chunk_index_tag 3
+#define meshtastic_ChunkedPayload_payload_chunk_tag 4
+#define meshtastic_resend_chunks_chunks_tag      1
+#define meshtastic_ChunkedPayloadResponse_payload_id_tag 1
+#define meshtastic_ChunkedPayloadResponse_request_transfer_tag 2
+#define meshtastic_ChunkedPayloadResponse_accept_transfer_tag 3
+#define meshtastic_ChunkedPayloadResponse_resend_chunks_tag 4
+#define meshtastic_LeapData_final_dest_tag       1
+#define meshtastic_LeapData_leap_mask_tag        2
+#define meshtastic_LeapData_first_leap_tag       3
+#define meshtastic_LeapData_last_leap_tag        4
+#define meshtastic_LeapData_prior_hops_tag       5
+#define meshtastic_Data_portnum_tag              1
+#define meshtastic_Data_payload_tag              2
+#define meshtastic_Data_want_response_tag        3
+#define meshtastic_Data_dest_tag                 4
+#define meshtastic_Data_source_tag               5
+#define meshtastic_Data_request_id_tag           6
+#define meshtastic_Data_reply_id_tag             7
+#define meshtastic_Data_emoji_tag                8
+#define meshtastic_Data_bitfield_tag             9
+#define meshtastic_Data_leap_data_tag            10
+#define meshtastic_MeshPacket_from_tag           1
+#define meshtastic_MeshPacket_to_tag             2
+#define meshtastic_MeshPacket_channel_tag        3
+#define meshtastic_MeshPacket_decoded_tag        4
+#define meshtastic_MeshPacket_encrypted_tag      5
+#define meshtastic_MeshPacket_id_tag             6
+#define meshtastic_MeshPacket_rx_time_tag        7
+#define meshtastic_MeshPacket_rx_snr_tag         8
+#define meshtastic_MeshPacket_hop_limit_tag      9
+#define meshtastic_MeshPacket_want_ack_tag       10
+#define meshtastic_MeshPacket_priority_tag       11
+#define meshtastic_MeshPacket_rx_rssi_tag        12
+#define meshtastic_MeshPacket_delayed_tag        13
+#define meshtastic_MeshPacket_via_mqtt_tag       14
+#define meshtastic_MeshPacket_hop_start_tag      15
+#define meshtastic_MeshPacket_public_key_tag     16
+#define meshtastic_MeshPacket_pki_encrypted_tag  17
+#define meshtastic_MeshPacket_next_hop_tag       18
+#define meshtastic_MeshPacket_relay_node_tag     19
+#define meshtastic_MeshPacket_tx_after_tag       20
 #define meshtastic_FromRadio_id_tag              1
 #define meshtastic_FromRadio_packet_tag          2
 #define meshtastic_FromRadio_my_info_tag         3
@@ -1499,17 +1539,6 @@ extern "C" {
 #define meshtastic_ToRadio_xmodemPacket_tag      5
 #define meshtastic_ToRadio_mqttClientProxyMessage_tag 6
 #define meshtastic_ToRadio_heartbeat_tag         7
-#define meshtastic_NodeRemoteHardwarePin_node_num_tag 1
-#define meshtastic_NodeRemoteHardwarePin_pin_tag 2
-#define meshtastic_ChunkedPayload_payload_id_tag 1
-#define meshtastic_ChunkedPayload_chunk_count_tag 2
-#define meshtastic_ChunkedPayload_chunk_index_tag 3
-#define meshtastic_ChunkedPayload_payload_chunk_tag 4
-#define meshtastic_resend_chunks_chunks_tag      1
-#define meshtastic_ChunkedPayloadResponse_payload_id_tag 1
-#define meshtastic_ChunkedPayloadResponse_request_transfer_tag 2
-#define meshtastic_ChunkedPayloadResponse_accept_transfer_tag 3
-#define meshtastic_ChunkedPayloadResponse_resend_chunks_tag 4
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_Position_FIELDLIST(X, a) \
@@ -1578,9 +1607,11 @@ X(a, STATIC,   SINGULAR, FIXED32,  source,            5) \
 X(a, STATIC,   SINGULAR, FIXED32,  request_id,        6) \
 X(a, STATIC,   SINGULAR, FIXED32,  reply_id,          7) \
 X(a, STATIC,   SINGULAR, FIXED32,  emoji,             8) \
-X(a, STATIC,   OPTIONAL, UINT32,   bitfield,          9)
+X(a, STATIC,   OPTIONAL, UINT32,   bitfield,          9) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  leap_data,        10)
 #define meshtastic_Data_CALLBACK NULL
 #define meshtastic_Data_DEFAULT NULL
+#define meshtastic_Data_leap_data_MSGTYPE meshtastic_LeapData
 
 #define meshtastic_KeyVerification_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT64,   nonce,             1) \
@@ -1841,6 +1872,15 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,resend_chunks,payload_varian
 #define meshtastic_ChunkedPayloadResponse_DEFAULT NULL
 #define meshtastic_ChunkedPayloadResponse_payload_variant_resend_chunks_MSGTYPE meshtastic_resend_chunks
 
+#define meshtastic_LeapData_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   final_dest,        1) \
+X(a, STATIC,   SINGULAR, UINT32,   leap_mask,         2) \
+X(a, STATIC,   OPTIONAL, UINT32,   first_leap,        3) \
+X(a, STATIC,   OPTIONAL, UINT32,   last_leap,         4) \
+X(a, STATIC,   OPTIONAL, UINT32,   prior_hops,        5)
+#define meshtastic_LeapData_CALLBACK NULL
+#define meshtastic_LeapData_DEFAULT NULL
+
 extern const pb_msgdesc_t meshtastic_Position_msg;
 extern const pb_msgdesc_t meshtastic_User_msg;
 extern const pb_msgdesc_t meshtastic_RouteDiscovery_msg;
@@ -1870,6 +1910,7 @@ extern const pb_msgdesc_t meshtastic_NodeRemoteHardwarePin_msg;
 extern const pb_msgdesc_t meshtastic_ChunkedPayload_msg;
 extern const pb_msgdesc_t meshtastic_resend_chunks_msg;
 extern const pb_msgdesc_t meshtastic_ChunkedPayloadResponse_msg;
+extern const pb_msgdesc_t meshtastic_LeapData_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define meshtastic_Position_fields &meshtastic_Position_msg
@@ -1901,6 +1942,7 @@ extern const pb_msgdesc_t meshtastic_ChunkedPayloadResponse_msg;
 #define meshtastic_ChunkedPayload_fields &meshtastic_ChunkedPayload_msg
 #define meshtastic_resend_chunks_fields &meshtastic_resend_chunks_msg
 #define meshtastic_ChunkedPayloadResponse_fields &meshtastic_ChunkedPayloadResponse_msg
+#define meshtastic_LeapData_fields &meshtastic_LeapData_msg
 
 /* Maximum encoded size of messages (where known) */
 /* meshtastic_resend_chunks_size depends on runtime parameters */
@@ -1909,7 +1951,7 @@ extern const pb_msgdesc_t meshtastic_ChunkedPayloadResponse_msg;
 #define meshtastic_ChunkedPayload_size           245
 #define meshtastic_ClientNotification_size       482
 #define meshtastic_Compressed_size               239
-#define meshtastic_Data_size                     269
+#define meshtastic_Data_size                     301
 #define meshtastic_DeviceMetadata_size           54
 #define meshtastic_FileInfo_size                 236
 #define meshtastic_FromRadio_size                510
@@ -1918,8 +1960,9 @@ extern const pb_msgdesc_t meshtastic_ChunkedPayloadResponse_msg;
 #define meshtastic_KeyVerificationNumberInform_size 58
 #define meshtastic_KeyVerificationNumberRequest_size 52
 #define meshtastic_KeyVerification_size          79
+#define meshtastic_LeapData_size                 30
 #define meshtastic_LogRecord_size                426
-#define meshtastic_MeshPacket_size               378
+#define meshtastic_MeshPacket_size               410
 #define meshtastic_MqttClientProxyMessage_size   501
 #define meshtastic_MyNodeInfo_size               77
 #define meshtastic_NeighborInfo_size             258
