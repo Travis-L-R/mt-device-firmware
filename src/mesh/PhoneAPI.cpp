@@ -309,6 +309,11 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
         case meshtastic_Config_device_ui_tag: // NOOP!
             fromRadioScratch.config.which_payload_variant = meshtastic_Config_device_ui_tag;
             break;
+        case meshtastic_Config_destinations_tag:
+            LOG_DEBUG("Send config: destinations");
+            fromRadioScratch.config.which_payload_variant = meshtastic_Config_destinations_tag;
+            fromRadioScratch.config.payload_variant.destinations = config.destinations;
+            break;
         default:
             LOG_ERROR("Unknown config type %d", config_state);
         }

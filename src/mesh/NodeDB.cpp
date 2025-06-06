@@ -492,6 +492,7 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
     config.has_network = true;
     config.has_bluetooth = (HAS_BLUETOOTH ? true : false);
     config.has_security = true;
+    config.has_destinations = true;
     config.device.rebroadcast_mode = meshtastic_Config_DeviceConfig_RebroadcastMode_ALL;
 
     config.lora.sx126x_rx_boosted_gain = true;
@@ -1327,6 +1328,7 @@ bool NodeDB::saveToDiskNoRetry(int saveWhat)
         config.has_network = true;
         config.has_bluetooth = true;
         config.has_security = true;
+        config.has_destinations = true;
 
         success &= saveProto(configFileName, meshtastic_LocalConfig_size, &meshtastic_LocalConfig_msg, &config);
     }
