@@ -399,8 +399,15 @@ bool isFromUs(const meshtastic_MeshPacket *p)
 }
 
 // Returns true if the packet is destined to us
-bool isToUs(const meshtastic_MeshPacket *p)
+bool isToUs(const meshtastic_MeshPacket *p, bool leapAware=false)
 {
+    // if we have leaps enabled and care about the final destination only, check for that in the leap_data instead of p->to
+    if (leapAware && config.destinations.leaps_enabled && 
+        p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && 
+        p->decoded.has_leap_data) {
+            return p->decoded.leap_data.final_dest == nodeDB->getNodeNum();
+    }
+
     return p->to == nodeDB->getNodeNum();
 }
 
