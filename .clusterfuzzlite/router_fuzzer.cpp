@@ -95,7 +95,7 @@ void lateInitVariant()
                   0x4c, 0xf6, 0x1a, 0x96, 0x04, 0x1a, 0x3e, 0xfc, 0xbb, 0x8e, 0x33, 0x71, 0xe5, 0xfc, 0xff, 0x3c},
     };
     config.security.admin_key_count = 1;
-    config.lora.region = meshtastic_Config_LoRaConfig_RegionCode_US;
+    config.lora.region = meshtastic_LoRaConfig_RegionCode_US;
     moduleConfig.has_mqtt = true;
     moduleConfig.mqtt = meshtastic_ModuleConfig_MQTTConfig{
         .enabled = true,

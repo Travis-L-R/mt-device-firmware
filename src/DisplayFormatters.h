@@ -4,5 +4,5 @@
 class DisplayFormatters
 {
   public:
-    static const char *getModemPresetDisplayName(meshtastic_Config_LoRaConfig_ModemPreset preset, bool useShortName);
+    static const char *getModemPresetDisplayName(meshtastic_LoRaConfig_ModemPreset preset, bool useShortName);
 };

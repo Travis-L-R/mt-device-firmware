@@ -139,7 +139,7 @@ ErrorCode RadioLibInterface::send(meshtastic_MeshPacket *p)
 
 #ifndef DISABLE_WELCOME_UNSET
 
-    if (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+    if (config.lora.region != meshtastic_LoRaConfig_RegionCode_UNSET) {
         if (disabled || !config.lora.tx_enabled) {
             LOG_WARN("send - !config.lora.tx_enabled");
             packetPool.release(p);
@@ -408,7 +408,7 @@ void RadioLibInterface::handleReceiveInterrupt()
     xmitMsec = getPacketTime(length);
 
 #ifndef DISABLE_WELCOME_UNSET
-    if (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+    if (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET) {
         LOG_WARN("lora rx disabled: Region unset");
         airTime->logAirtime(RX_ALL_LOG, xmitMsec);
         return;

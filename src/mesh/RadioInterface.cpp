@@ -14,7 +14,7 @@
 
 #define RDEF(name, freq_start, freq_end, duty_cycle, spacing, power_limit, audio_permitted, frequency_switching, wide_lora)      \
     {                                                                                                                            \
-        meshtastic_Config_LoRaConfig_RegionCode_##name, freq_start, freq_end, duty_cycle, spacing, power_limit, audio_permitted, \
+        meshtastic_LoRaConfig_RegionCode_##name, freq_start, freq_end, duty_cycle, spacing, power_limit, audio_permitted, \
             frequency_switching, wide_lora, #name                                                                                \
     }
 
@@ -169,11 +169,11 @@ void initRegion()
 {
     const RegionInfo *r = regions;
 #ifdef REGULATORY_LORA_REGIONCODE
-    for (; r->code != meshtastic_Config_LoRaConfig_RegionCode_UNSET && r->code != REGULATORY_LORA_REGIONCODE; r++)
+    for (; r->code != meshtastic_LoRaConfig_RegionCode_UNSET && r->code != REGULATORY_LORA_REGIONCODE; r++)
         ;
     LOG_INFO("Wanted region %d, regulatory override to %s", config.lora.region, r->name);
 #else
-    for (; r->code != meshtastic_Config_LoRaConfig_RegionCode_UNSET && r->code != config.lora.region; r++)
+    for (; r->code != meshtastic_LoRaConfig_RegionCode_UNSET && r->code != config.lora.region; r++)
         ;
     LOG_INFO("Wanted region %d, using %s", config.lora.region, r->name);
 #endif
@@ -442,33 +442,33 @@ void RadioInterface::applyModemConfig()
 {
     // Set up default configuration
     // No Sync Words in LORA mode
-    meshtastic_Config_LoRaConfig &loraConfig = config.lora;
+    meshtastic_LoRaConfig &loraConfig = config.lora;
     bool validConfig = false; // We need to check for a valid configuration
     while (!validConfig) {
         if (loraConfig.use_preset) {
 
             switch (loraConfig.modem_preset) {
-            case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO:
+            case meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO:
                 bw = (myRegion->wideLora) ? 1625.0 : 500;
                 cr = 5;
                 sf = 7;
                 break;
-            case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_FAST:
+            case meshtastic_LoRaConfig_ModemPreset_SHORT_FAST:
                 bw = (myRegion->wideLora) ? 812.5 : 250;
                 cr = 5;
                 sf = 7;
                 break;
-            case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_SLOW:
+            case meshtastic_LoRaConfig_ModemPreset_SHORT_SLOW:
                 bw = (myRegion->wideLora) ? 812.5 : 250;
                 cr = 5;
                 sf = 8;
                 break;
-            case meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST:
+            case meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST:
                 bw = (myRegion->wideLora) ? 812.5 : 250;
                 cr = 5;
                 sf = 9;
                 break;
-            case meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_SLOW:
+            case meshtastic_LoRaConfig_ModemPreset_MEDIUM_SLOW:
                 bw = (myRegion->wideLora) ? 812.5 : 250;
                 cr = 5;
                 sf = 10;
@@ -478,12 +478,12 @@ void RadioInterface::applyModemConfig()
                 cr = 5;
                 sf = 11;
                 break;
-            case meshtastic_Config_LoRaConfig_ModemPreset_LONG_MODERATE:
+            case meshtastic_LoRaConfig_ModemPreset_LONG_MODERATE:
                 bw = (myRegion->wideLora) ? 406.25 : 125;
                 cr = 8;
                 sf = 11;
                 break;
-            case meshtastic_Config_LoRaConfig_ModemPreset_LONG_SLOW:
+            case meshtastic_LoRaConfig_ModemPreset_LONG_SLOW:
                 bw = (myRegion->wideLora) ? 406.25 : 125;
                 cr = 8;
                 sf = 12;
@@ -520,7 +520,7 @@ void RadioInterface::applyModemConfig()
 
             // Set to default modem preset
             loraConfig.use_preset = true;
-            loraConfig.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST;
+            loraConfig.modem_preset = meshtastic_LoRaConfig_ModemPreset_LONG_FAST;
         } else {
             validConfig = true;
         }

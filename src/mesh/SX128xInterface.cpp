@@ -73,9 +73,9 @@ template <typename T> bool SX128xInterface<T>::init()
     // \todo Display actual typename of the adapter, not just `SX128x`
     LOG_INFO("SX128x init result %d", res);
 
-    if ((config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24) && (res == RADIOLIB_ERR_INVALID_FREQUENCY)) {
+    if ((config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24) && (res == RADIOLIB_ERR_INVALID_FREQUENCY)) {
         LOG_WARN("Radio only supports 2.4GHz LoRa. Adjusting Region and rebooting");
-        config.lora.region = meshtastic_Config_LoRaConfig_RegionCode_LORA_24;
+        config.lora.region = meshtastic_LoRaConfig_RegionCode_LORA_24;
         nodeDB->saveToDisk(SEGMENT_CONFIG);
         delay(2000);
 #if defined(ARCH_ESP32)

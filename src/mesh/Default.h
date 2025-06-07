@@ -57,15 +57,15 @@ class Default
             return 1.0;
         } else {
             float throttlingFactor = 0.075;
-            if (config.lora.use_preset && config.lora.modem_preset == meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_SLOW)
+            if (config.lora.use_preset && config.lora.modem_preset == meshtastic_LoRaConfig_ModemPreset_MEDIUM_SLOW)
                 throttlingFactor = 0.04;
-            else if (config.lora.use_preset && config.lora.modem_preset == meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST)
+            else if (config.lora.use_preset && config.lora.modem_preset == meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST)
                 throttlingFactor = 0.02;
-            else if (config.lora.use_preset && config.lora.modem_preset == meshtastic_Config_LoRaConfig_ModemPreset_SHORT_SLOW)
+            else if (config.lora.use_preset && config.lora.modem_preset == meshtastic_LoRaConfig_ModemPreset_SHORT_SLOW)
                 throttlingFactor = 0.01;
             else if (config.lora.use_preset &&
-                     IS_ONE_OF(config.lora.modem_preset, meshtastic_Config_LoRaConfig_ModemPreset_SHORT_FAST,
-                               meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO))
+                     IS_ONE_OF(config.lora.modem_preset, meshtastic_LoRaConfig_ModemPreset_SHORT_FAST,
+                               meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO))
                 return 1.0; // Don't bother throttling for highest bandwidth presets
             // Scaling up traffic based on number of nodes over 40
             int nodesOverForty = (numOnlineNodes - 40);

@@ -18,7 +18,7 @@ InkHUD::TipsApplet::TipsApplet()
 
     // Antenna, region, timezone
     // Shown at boot if region not yet set
-    if (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET)
+    if (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET)
         tipQueue.push_back(Tip::FINISH_SETUP);
 
     // Shutdown info
@@ -61,7 +61,7 @@ void InkHUD::TipsApplet::onRender()
         printAt(0, cursorY, "- connect a client app");
 
         // Only if region not set
-        if (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+        if (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET) {
             cursorY += fontSmall.lineHeight() * 1.2;
             printAt(0, cursorY, "- set region");
         }

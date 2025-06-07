@@ -521,7 +521,7 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
 {
     auto changes = SEGMENT_CONFIG;
     auto existingRole = config.device.role;
-    bool isRegionUnset = (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET);
+    bool isRegionUnset = (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET);
     bool requiresReboot = true;
 
     switch (c.which_payload_variant) {
@@ -660,7 +660,7 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
 #endif
         config.lora = c.payload_variant.lora;
         // If we're setting region for the first time, init the region
-        if (isRegionUnset && config.lora.region > meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+        if (isRegionUnset && config.lora.region > meshtastic_LoRaConfig_RegionCode_UNSET) {
             if (!owner.is_licensed) {
                 bool keygenSuccess = false;
                 if (config.security.private_key.size == 32) {

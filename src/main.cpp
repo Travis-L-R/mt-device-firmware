@@ -1048,7 +1048,7 @@ void setup()
 #endif
 
 #if defined(RF95_IRQ) && RADIOLIB_EXCLUDE_SX127X != 1
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = new RF95Interface(RadioLibHAL, LORA_CS, RF95_IRQ, RF95_RESET, RF95_DIO1);
         if (!rIf->init()) {
             LOG_WARN("No RF95 radio");
@@ -1062,7 +1062,7 @@ void setup()
 #endif
 
 #if defined(USE_SX1262) && !defined(ARCH_PORTDUINO) && !defined(TCXO_OPTIONAL) && RADIOLIB_EXCLUDE_SX126X != 1
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         auto *sxIf = new SX1262Interface(RadioLibHAL, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
 #ifdef SX126X_DIO3_TCXO_VOLTAGE
         sxIf->setTCXOVoltage(SX126X_DIO3_TCXO_VOLTAGE);
@@ -1080,7 +1080,7 @@ void setup()
 #endif
 
 #if defined(USE_SX1262) && !defined(ARCH_PORTDUINO) && defined(TCXO_OPTIONAL)
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         // try using the specified TCXO voltage
         auto *sxIf = new SX1262Interface(RadioLibHAL, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
         sxIf->setTCXOVoltage(SX126X_DIO3_TCXO_VOLTAGE);
@@ -1095,7 +1095,7 @@ void setup()
         }
     }
 
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         // If specified TCXO voltage fails, attempt to use DIO3 as a reference instead
         rIf = new SX1262Interface(RadioLibHAL, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
         if (!rIf->init()) {
@@ -1111,7 +1111,7 @@ void setup()
 
 #if defined(USE_SX1268)
 #if defined(SX126X_DIO3_TCXO_VOLTAGE) && defined(TCXO_OPTIONAL)
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         // try using the specified TCXO voltage
         auto *sxIf = new SX1268Interface(RadioLibHAL, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
         sxIf->setTCXOVoltage(SX126X_DIO3_TCXO_VOLTAGE);
@@ -1126,7 +1126,7 @@ void setup()
         }
     }
 #endif
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = new SX1268Interface(RadioLibHAL, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
         if (!rIf->init()) {
             LOG_WARN("No SX1268 radio");
@@ -1140,7 +1140,7 @@ void setup()
 #endif
 
 #if defined(USE_LLCC68)
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = new LLCC68Interface(RadioLibHAL, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY);
         if (!rIf->init()) {
             LOG_WARN("No LLCC68 radio");
@@ -1154,7 +1154,7 @@ void setup()
 #endif
 
 #if defined(USE_LR1110) && RADIOLIB_EXCLUDE_LR11X0 != 1
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = new LR1110Interface(RadioLibHAL, LR1110_SPI_NSS_PIN, LR1110_IRQ_PIN, LR1110_NRESET_PIN, LR1110_BUSY_PIN);
         if (!rIf->init()) {
             LOG_WARN("No LR1110 radio");
@@ -1210,9 +1210,9 @@ void setup()
 #endif
 
     // check if the radio chip matches the selected region
-    if ((config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_LORA_24) && (!rIf->wideLora())) {
+    if ((config.lora.region == meshtastic_LoRaConfig_RegionCode_LORA_24) && (!rIf->wideLora())) {
         LOG_WARN("LoRa chip does not support 2.4GHz. Revert to unset");
-        config.lora.region = meshtastic_Config_LoRaConfig_RegionCode_UNSET;
+        config.lora.region = meshtastic_LoRaConfig_RegionCode_UNSET;
         nodeDB->saveToDisk(SEGMENT_CONFIG);
         if (!rIf->reconfigure()) {
             LOG_WARN("Reconfigure failed, rebooting");

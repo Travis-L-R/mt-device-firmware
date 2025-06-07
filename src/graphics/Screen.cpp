@@ -1893,7 +1893,7 @@ int32_t Screen::runOnce()
 #endif
 
 #ifndef DISABLE_WELCOME_UNSET
-    if (showingNormalScreen && config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+    if (showingNormalScreen && config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET) {
         setWelcomeFrames();
     }
 #endif

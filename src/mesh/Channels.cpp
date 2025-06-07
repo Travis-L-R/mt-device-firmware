@@ -78,9 +78,9 @@ meshtastic_Channel &Channels::fixupChannel(ChannelIndex chIndex)
 
 void Channels::initDefaultLoraConfig()
 {
-    meshtastic_Config_LoRaConfig &loraConfig = config.lora;
+    meshtastic_LoRaConfig &loraConfig = config.lora;
 
-    loraConfig.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST; // Default to Long Range & Fast
+    loraConfig.modem_preset = meshtastic_LoRaConfig_ModemPreset_LONG_FAST; // Default to Long Range & Fast
     loraConfig.use_preset = true;
     loraConfig.tx_power = 0; // default
     loraConfig.channel_num = 0;

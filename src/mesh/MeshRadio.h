@@ -7,7 +7,7 @@
 
 // Map from old region names to new region enums
 struct RegionInfo {
-    meshtastic_Config_LoRaConfig_RegionCode code;
+    meshtastic_LoRaConfig_RegionCode code;
     float freqStart;
     float freqEnd;
     float dutyCycle;

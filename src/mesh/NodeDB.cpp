@@ -261,7 +261,7 @@ NodeDB::NodeDB()
 
 #if !(MESHTASTIC_EXCLUDE_PKI_KEYGEN || MESHTASTIC_EXCLUDE_PKI)
 
-    if (!owner.is_licensed && config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+    if (!owner.is_licensed && config.lora.region != meshtastic_LoRaConfig_RegionCode_UNSET) {
         bool keygenSuccess = false;
         if (config.security.private_key.size == 32) {
             if (crypto->regeneratePublicKey(config.security.public_key.bytes, config.security.private_key.bytes)) {
@@ -503,12 +503,12 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
 #ifdef USERPREFS_CONFIG_LORA_REGION
     config.lora.region = USERPREFS_CONFIG_LORA_REGION;
 #else
-    config.lora.region = meshtastic_Config_LoRaConfig_RegionCode_UNSET;
+    config.lora.region = meshtastic_LoRaConfig_RegionCode_UNSET;
 #endif
 #ifdef USERPREFS_LORACONFIG_MODEM_PRESET
     config.lora.modem_preset = USERPREFS_LORACONFIG_MODEM_PRESET;
 #else
-    config.lora.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST;
+    config.lora.modem_preset = meshtastic_LoRaConfig_ModemPreset_LONG_FAST;
 #endif
     config.lora.hop_limit = HOP_RELIABLE;
 #ifdef USERPREFS_CONFIG_LORA_IGNORE_MQTT
