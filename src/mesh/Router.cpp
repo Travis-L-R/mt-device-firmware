@@ -38,8 +38,21 @@ Allocator<meshtastic_MeshPacket> &packetPool = staticPool;
 
 static uint8_t bytes[MAX_LORA_PAYLOAD_LEN + 1] __attribute__((__aligned__));
 
-/** Attempt to find a node number among our configure destinations */
-meshtastic_DestinationsConfig_MeshDestination *findDestinationForAddress(uint32_t n){
+/** Check leap addresses for validity and optionally against masked addresses and the default broadcast address */
+bool validateLeapAddress(uint32_t n, uint32_t mask = 0, bool allow_broadcast = true) {
+    // Reject special addresses as leap destinations
+    if (n < NUM_RESERVED || (n == NODENUM_BROADCAST && !allow_broadcast))
+        return false;
+
+    // Reject masked addresses
+    if ( (n & mask) == n) 
+        return false;
+    
+    return true;
+}
+
+/** Attempt to find a node number among our configured destinations */
+meshtastic_DestinationsConfig_MeshDestination *Router::findDestinationForAddress(uint32_t n, bool leap_only, uint32_t leap_mask){
     // Disregard reserved addresses
     if (n < NUM_RESERVED) {
         return nullptr;
@@ -50,6 +63,13 @@ meshtastic_DestinationsConfig_MeshDestination *findDestinationForAddress(uint32_
     // Loop through, try to find a destination
     for (uint16_t i=0; i<config.destinations.destinations_count; i++) {
         dest = &config.destinations.destinations[i];
+
+        // we may only want destinations that have (valid and/or unmasked) leap data
+        if (leap_only) {
+            if( !((dest->has_first_leap && validateLeapAddress(dest->first_leap, leap_mask)) || 
+                  (dest->has_last_leap && validateLeapAddress(dest->last_leap, leap_mask))))
+                continue;
+        }
 
         // if we have a match, finish and return the index as 
         if (n == dest->num)
@@ -283,16 +303,200 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // set the relayer to us
 
     // check whether we have a destination configured for our "to" address
-    meshtastic_DestinationsConfig_MeshDestination *dest = findDestinationForAddress(p->to);
+    meshtastic_DestinationsConfig_MeshDestination *dest = nullptr;
+    uint32_t our_node_num = nodeDB->getNodeNum();
+    bool conducting_leap = false;
+    bool add_to_mask = false;
+    bool unloading_encrypted = false;
 
-    if (isFromUs(p)) {
-        // If we are the original transmitter and we have a destinattion configured with a custom hop limit, adjust it
+    // Consider whether we have a leap destination
+    if (config.destinations.leaps_enabled && p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && 
+        p->to != NODENUM_BROADCAST && p->to != NODENUM_BROADCAST_NO_LORA) {
+            LOG_DEBUG("Leaps enabled and we have a decoded payload for 0x%x", p->to);
+        
+        if (p->decoded.has_leap_data) {
+            LOG_DEBUG("Packet already has leap data");
+
+            // Check if our address is already masked, if so, drop it to avoid loops.
+            if ((p->decoded.leap_data.leap_mask & our_node_num) == our_node_num)
+            {
+                LOG_WARN("Our node already matches the leap_mask, dropping");
+                return meshtastic_Routing_Error_NO_ROUTE; // PR-TODO: see if this error is actually suitable or not
+            }
+
+            // If we are the final destination, there's no need to retransmit
+            if (p->decoded.leap_data.final_dest == our_node_num) {
+                return meshtastic_Routing_Error_NONE; // PR-TODO: see if this error is actually suitable or not
+            }
+            
+            if (p->to == our_node_num) {
+                LOG_INFO("Received leap packet with us as next leap");
+                // PR-TODO: consider whether leaps should be "translated" on the receipt side for better handling
+
+                // We will leap, unless we are also the final destination
+                conducting_leap = p->decoded.leap_data.final_dest != our_node_num; 
+
+                if (p->decoded.leap_data.has_last_leap && p->decoded.leap_data.last_leap == our_node_num) {
+                    LOG_INFO("We are the last leap");
+
+                    // If using leap channel, get rid of it (exiting/removing tag)
+                    if (config.destinations.leap_channel != 0 && p->channel == config.destinations.leap_channel) {
+                        LOG_INFO("Reverting leap channel to channel 0");
+                        // PR-TODO: consider implementing PSK check to only drop it down when the default AQ== PSK is used on channel 0 or the leap channel doesn't use a (new) default leap-channel PSK.
+                        // otherwise packets going over a public PSK leap channel may be re-encrypted with a private PSK for channel 0, posing a potential security risk.
+                        p->channel = 0;
+
+                        // invert the id upon reaching last leap, if coming out of leap channel "tunnel", 
+                        // so that it gets rebroadcast gain near final location (for leap-naive final_destinations)
+                        p->id = ~(p->id);
+
+                        // clear the leap leg bitfield when we're headed to the final destination, 
+                        /// because leap-naive nodes may strip the leap data and leap-aware nodes would then drop the packet if this bit was set.
+                        if (p->decoded.has_bitfield) 
+                            p->decoded.bitfield = p->decoded.bitfield & ~BITFIELD_LEAP_LEG_MASK;
+                    }
+                    
+                    // An encrypted payload has been leaped, but now that we are the last leap, we want to put the LEAP_APP payload encrypted contents back in.
+                    if (p->decoded.portnum == meshtastic_PortNum_LEAP_APP ) {
+                        LOG_DEBUG("Reinstating encrypted leap payload");
+
+                        // PR-TODO maybe using malloc or equivalent?
+                        meshtastic_Data temp_data;
+                        memcpy(&temp_data, &p->decoded.payload.bytes, p->decoded.payload.size);
+                        pb_size_t payload_size = p->decoded.payload.size;
+
+                        memcpy(&(p->encrypted.bytes), &temp_data, payload_size);
+                        p->encrypted.size= payload_size;
+                        p->pki_encrypted = true;
+                        p->channel = 0;
+                        p->which_payload_variant = meshtastic_MeshPacket_encrypted_tag;
+                        unloading_encrypted = true;
+                    }
+
+                } else if (!p->decoded.leap_data.has_first_leap || p->decoded.leap_data.first_leap == 0) {
+                    // We are the first leap - store that fact in the leap data
+
+                    p->decoded.leap_data.first_leap = our_node_num;
+                }
+
+                // Set "to" to the final_destination - though we may replace it below
+                p->to = p->decoded.leap_data.final_dest;
+
+            }
+   
+        } else if (p->decoded.has_bitfield && p->decoded.bitfield & BITFIELD_LEAP_LEG_MASK) {
+            LOG_WARN("Received packet with leap leg mask set but no leap data, dropping");
+            return meshtastic_Routing_Error_BAD_REQUEST; // PR-TODO: maybe find a better error option
+        } else {
+            LOG_DEBUG("Packet lacks leap data");
+
+            // We are the originator
+            if (isFromUs(p)) {
+                p->decoded.leap_data.final_dest = p->to;
+
+                dest = findDestinationForAddress(p->decoded.leap_data.final_dest, true);
+
+                // if we have this as a destination, add barebones leap data 
+                if (dest) {
+                    LOG_DEBUG("Adding leap data to packet");
+                    p->decoded.has_leap_data = true;
+                    p->decoded.leap_data.final_dest = p->to;
+                    p->decoded.leap_data.leap_mask = 0;
+                    p->decoded.has_bitfield = true;
+                    p->decoded.bitfield |= BITFIELD_LEAP_LEG_MASK;
+                    conducting_leap = true;
+                }
+            }
+        }
+
+        // Unless we are unloading an encrypted LEAP_APP payload, we may want to populate missing leap path info 
+        if (!unloading_encrypted && p->decoded.has_leap_data && p->decoded.leap_data.final_dest != our_node_num) {
+            LOG_DEBUG("Checking/populating leap data");
+    
+            dest = findDestinationForAddress(p->decoded.leap_data.final_dest, true, p->decoded.leap_data.leap_mask);
+
+            if (dest) {
+                // Do we have a missing last leap for this destination? If so, set it.
+                if ((!p->decoded.leap_data.has_last_leap || p->decoded.leap_data.last_leap == 0) &&
+                    dest->has_last_leap && validateLeapAddress(dest->last_leap, p->decoded.leap_data.leap_mask)) {
+
+                    LOG_DEBUG("Setting last leap");
+                    p->decoded.leap_data.has_last_leap = true;
+                    p->decoded.leap_data.last_leap = dest->last_leap;
+
+                    // we will want to mask out our node number to prevent later loops, even though we're not necessarily conducting a leap.
+                    add_to_mask = true;
+                }
+
+                // If we don't have a next leap node destination set yet and first leap isn't set (which means this is still pre-first leap)
+                // then direct the packet towards the first leap that we have for the destination, if any.
+                if (p->decoded.leap_data.final_dest == p->to && 
+                    (!p->decoded.leap_data.has_first_leap || p->decoded.leap_data.first_leap == 0) &&
+                    dest->has_first_leap && 
+                    validateLeapAddress(dest->first_leap, p->decoded.leap_data.leap_mask)) {
+
+                    LOG_INFO("Setting the first leap to our first leap");
+                    p->to = dest->first_leap;
+                }
+            } 
+
+            // If at this point we haven't got a next leap set, check if we have a path to the last leap (first_leap to the last_leap)
+            // if so, we will treat this as a leap
+            if (p->to == p->decoded.leap_data.final_dest && 
+                p->decoded.leap_data.has_last_leap && p->decoded.leap_data.last_leap != 0 && 
+                validateLeapAddress(p->decoded.leap_data.last_leap, p->decoded.leap_data.leap_mask)) {
+
+                dest = findDestinationForAddress(p->decoded.leap_data.last_leap, true, p->decoded.leap_data.leap_mask);
+
+                if (dest && dest->has_first_leap && validateLeapAddress(dest->first_leap, p->decoded.leap_data.leap_mask)) {
+                        p->to = dest->first_leap;
+                        conducting_leap = true;
+                }
+            } else if (! validateLeapAddress(p->to, p->decoded.leap_data.leap_mask)) {
+                // double check that we're not directing a packet to an already used/masked leap node
+                LOG_WARN("Intermediate leap address 0x%x already matches the leap_mask, dropping", p->to);
+                return meshtastic_Routing_Error_NO_ROUTE; // PR-TODO: see if this error is actually suitable or not
+            }
+        }
+    }
+
+    if (conducting_leap) {
+        LOG_DEBUG("Conducting leap");
+
+        if (p->hop_limit <= p->hop_start) {
+            // initialize if need be
+            if (!p->decoded.leap_data.has_prior_hops) {
+                p->decoded.leap_data.has_prior_hops = true;
+                p->decoded.leap_data.prior_hops = 0;
+            }
+            
+            p->decoded.leap_data.prior_hops += (p->hop_start - p->hop_limit);
+        } else {
+            LOG_WARN("Got bad hop_limit/hop_start %i/%i",p->hop_limit,p->hop_start);
+        }
+
+        // we will want to make this node number
+        add_to_mask = true;
+        
+        // Reset to our max configured hop limit (may adjusted later)
+        p->hop_start = Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit);
+        p->hop_limit = p->hop_start;
+    }
+
+    // mask out our node to prevent loops
+    if (add_to_mask) 
+        p->decoded.leap_data.leap_mask |= our_node_num;
+
+    // if we are the originator or we're conducting a leap, check if we have a destination to the current "to" address (which may be the next leap)
+    // and then apply any custom hop_limit
+    if (isFromUs(p) || conducting_leap ) {
+        dest = findDestinationForAddress(p->to);
         if (dest && dest->has_hop_limit && dest->hop_limit > 0) {
             LOG_DEBUG("Overriding hop limit %u to %u", p->hop_limit, dest->hop_limit);
             p->hop_limit = dest->hop_limit;
         }
             
-        // Set the hop limit with which we start
+        // Reset the hop limit with which we start
         p->hop_start = p->hop_limit;
     }
 
@@ -300,6 +504,14 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     if (dest && dest->has_next_hop && dest->next_hop != 0) {
         LOG_DEBUG("Overriding next hop %u to %u", p->next_hop, dest->next_hop);
         p->next_hop = dest->next_hop;
+    }
+
+    // Override channel to leap channel if need be (only we are conducting a normal leap from the default channel, otherwise leave the channel as is)
+    if (p->decoded.has_leap_data && config.destinations.leaps_enabled && conducting_leap && 
+        p->channel == 0 && config.destinations.leap_channel != 0 &&
+        (!p->decoded.leap_data.has_last_leap || p->decoded.leap_data.last_leap != our_node_num)) {
+            LOG_DEBUG("Overriding channel %u to leap channel %u", p->channel, config.destinations.leap_channel);
+            p->channel = config.destinations.leap_channel;
     }
 
     // If the packet hasn't yet been encrypted, do so now (it might already be encrypted if we are just forwarding it)
@@ -558,6 +770,15 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
 
 #if !(MESHTASTIC_EXCLUDE_PKI)
         meshtastic_NodeInfoLite *node = nodeDB->getMeshNode(p->to);
+
+        bool leap_encrypted = p->decoded.has_leap_data;
+        meshtastic_LeapData temp_leap_data; // used for copying leap data when wrapping PKI payload
+
+        // If leaping, we want to encrypt using the final destination's key, not necessarily the first one
+        if (leap_encrypted) {
+            node = nodeDB->getMeshNode(p->decoded.leap_data.final_dest);
+        }
+
         // We may want to retool things so we can send a PKC packet when the client specifies a key and nodenum, even if the node
         // is not in the local nodedb
         // First, only PKC encrypt packets we are originating
@@ -576,6 +797,13 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
             p->decoded.portnum != meshtastic_PortNum_TRACEROUTE_APP && p->decoded.portnum != meshtastic_PortNum_NODEINFO_APP &&
             p->decoded.portnum != meshtastic_PortNum_ROUTING_APP && p->decoded.portnum != meshtastic_PortNum_POSITION_APP) {
             LOG_DEBUG("Use PKI!");
+
+            // Temporarily store leap data
+            if (leap_encrypted) {
+                memcpy(&temp_leap_data, &p->decoded.leap_data, meshtastic_LeapData_size);
+                p->decoded.has_leap_data = false; // Don't want to include that when doing the packing of the packet for encryption
+            }
+
             if (numbytes + MESHTASTIC_HEADER_LENGTH + MESHTASTIC_PKC_OVERHEAD > MAX_LORA_PAYLOAD_LEN)
                 return meshtastic_Routing_Error_TOO_LARGE;
             if (p->pki_encrypted && !memfll(p->public_key.bytes, 0, 32) &&
@@ -584,8 +812,56 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
                          *node->user.public_key.bytes);
                 return meshtastic_Routing_Error_PKI_FAILED;
             }
-            crypto->encryptCurve25519(p->to, getFrom(p), node->user.public_key, p->id, numbytes, bytes, p->encrypted.bytes);
+
+            if (!leap_encrypted)
+                crypto->encryptCurve25519(p->to, getFrom(p), node->user.public_key, p->id, numbytes, bytes, p->encrypted.bytes);
+            else
+                crypto->encryptCurve25519(temp_leap_data.final_dest, getFrom(p), node->user.public_key, p->id, numbytes, bytes, p->encrypted.bytes);
+
             numbytes += MESHTASTIC_PKC_OVERHEAD;
+            
+            if (!leap_encrypted) {
+                p->channel = 0;
+                p->pki_encrypted = true;
+            } else {
+                // Switch in encrypted payload
+                memcpy(&(p->decoded.payload), p->encrypted.bytes, numbytes);
+
+                p->decoded.payload.size = numbytes;
+                p->decoded.portnum = meshtastic_PortNum_LEAP_APP;
+
+                // PR-todo: check if actually the need next two lines
+                p->pki_encrypted = false;
+                p->which_payload_variant = meshtastic_MeshPacket_decoded_tag;
+
+                p->want_ack = false; // the ack wouldn't come from the destination, it'd come from the first leap
+
+                // now that we've put the encrypted payload in, add the prepared leap data back
+                memcpy(&p->decoded.leap_data, &temp_leap_data, meshtastic_LeapData_size);
+                p->decoded.has_leap_data = true;
+
+                // invert the id, because it will be inverted when leaving the last_leap
+                // PR-todo: consider situation when final_dest gets and can decrypt packet before last_leap
+                p->id = ~p->id;
+
+                //Now do PSK encryption
+                // PR-todo: these next bits are copied from other parts of the existing code with changes, see if can D.R.Y. it.
+                numbytes = pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_Data_msg, &p->decoded);
+                if (numbytes + MESHTASTIC_HEADER_LENGTH > MAX_LORA_PAYLOAD_LEN)
+                    return meshtastic_Routing_Error_TOO_LARGE;
+
+                hash = channels.setActiveByIndex(chIndex);
+
+                // Now that we are encrypting the packet channel should be the hash (no longer the index)
+                p->channel = hash;
+                if (hash < 0) {
+                    // No suitable channel could be found for sending
+                    return meshtastic_Routing_Error_NO_CHANNEL;
+                }
+                crypto->encryptPacket(getFrom(p), p->id, numbytes, bytes);
+                memcpy(p->encrypted.bytes, bytes, numbytes);
+            }
+
             p->channel = 0;
             p->pki_encrypted = true;
         } else {

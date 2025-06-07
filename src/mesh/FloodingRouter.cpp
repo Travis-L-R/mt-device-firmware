@@ -49,7 +49,26 @@ void FloodingRouter::perhapsCancelDupe(const meshtastic_MeshPacket *p)
         config.device.role != meshtastic_Config_DeviceConfig_Role_REPEATER &&
         config.device.role != meshtastic_Config_DeviceConfig_Role_ROUTER_LATE) {
         // cancel rebroadcast of this message *if* there was already one, unless we're a router/repeater!
-        if (Router::cancelSending(p->from, p->id))
+        bool do_cancel = true;
+
+        // ...unless we're using leaps and might want to be a leap node...
+        if (config.destinations.leaps_enabled && p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.has_leap_data) {
+            uint32_t our_node_num = nodeDB->getNodeNum();
+
+            // we will want to rebroadcast if we are the next leap (it's coming to us but we aren't the final destination)
+            // or if we are the last leap and it's reached us early
+            // or the next leap in the path is missing from the packet but we can supply it (we have know the missing last leap or a way toward the last leap)
+            if ((p->to == our_node_num && p->decoded.leap_data.final_dest != our_node_num) ||
+                (p->decoded.leap_data.has_last_leap && p->decoded.leap_data.last_leap == our_node_num) ||
+                (p->to == p->decoded.leap_data.final_dest && 
+                    (((!p->decoded.leap_data.has_last_leap) && findDestinationForAddress(p->to, true)) ||
+                     ((p->decoded.leap_data.has_last_leap && findDestinationForAddress(p->decoded.leap_data.last_leap, true)))))
+                ) {
+                do_cancel = false;
+            }
+        }
+
+        if (do_cancel && Router::cancelSending(p->from, p->id))
             txRelayCanceled++;
     }
     if (config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE && iface) {

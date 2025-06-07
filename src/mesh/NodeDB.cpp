@@ -411,6 +411,10 @@ bool isToUs(const meshtastic_MeshPacket *p, bool leapAware=false)
     return p->to == nodeDB->getNodeNum();
 }
 
+bool isToUs(const meshtastic_MeshPacket *p) {
+    return isToUs(p, false);
+}
+
 bool isBroadcast(uint32_t dest)
 {
     return dest == NODENUM_BROADCAST || dest == NODENUM_BROADCAST_NO_LORA;
