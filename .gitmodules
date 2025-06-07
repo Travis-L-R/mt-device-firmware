@@ -1,7 +1,7 @@
 [submodule "protobufs"]
 	path = protobufs
 	url = https://github.com/Travis-L-R/mt-protobufs.git
-	branch = destinations_leaps
+	branch = destinations_lora_switch
 [submodule "meshtestic"]
 	path = meshtestic
 	url = https://github.com/meshtastic/meshTestic
