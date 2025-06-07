@@ -5,7 +5,7 @@
 #define PB_MESHTASTIC_MESHTASTIC_APPONLY_PB_H_INCLUDED
 #include <pb.h>
 #include "meshtastic/channel.pb.h"
-#include "meshtastic/config.pb.h"
+#include "meshtastic/lora_config.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
 #error Regenerate this file with the current version of nanopb generator.
@@ -23,7 +23,7 @@ typedef struct _meshtastic_ChannelSet {
     meshtastic_ChannelSettings settings[8];
     /* LoRa config */
     bool has_lora_config;
-    meshtastic_Config_LoRaConfig lora_config;
+    meshtastic_LoRaConfig lora_config;
 } meshtastic_ChannelSet;
 
 
@@ -32,8 +32,8 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define meshtastic_ChannelSet_init_default       {0, {meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default}, false, meshtastic_Config_LoRaConfig_init_default}
-#define meshtastic_ChannelSet_init_zero          {0, {meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero}, false, meshtastic_Config_LoRaConfig_init_zero}
+#define meshtastic_ChannelSet_init_default       {0, {meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default, meshtastic_ChannelSettings_init_default}, false, meshtastic_LoRaConfig_init_default}
+#define meshtastic_ChannelSet_init_zero          {0, {meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero, meshtastic_ChannelSettings_init_zero}, false, meshtastic_LoRaConfig_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_ChannelSet_settings_tag       1
@@ -46,7 +46,7 @@ X(a, STATIC,   OPTIONAL, MESSAGE,  lora_config,       2)
 #define meshtastic_ChannelSet_CALLBACK NULL
 #define meshtastic_ChannelSet_DEFAULT NULL
 #define meshtastic_ChannelSet_settings_MSGTYPE meshtastic_ChannelSettings
-#define meshtastic_ChannelSet_lora_config_MSGTYPE meshtastic_Config_LoRaConfig
+#define meshtastic_ChannelSet_lora_config_MSGTYPE meshtastic_LoRaConfig
 
 extern const pb_msgdesc_t meshtastic_ChannelSet_msg;
 
@@ -55,7 +55,7 @@ extern const pb_msgdesc_t meshtastic_ChannelSet_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_APPONLY_PB_H_MAX_SIZE meshtastic_ChannelSet_size
-#define meshtastic_ChannelSet_size               679
+#define meshtastic_ChannelSet_size               680
 
 #ifdef __cplusplus
 } /* extern "C" */

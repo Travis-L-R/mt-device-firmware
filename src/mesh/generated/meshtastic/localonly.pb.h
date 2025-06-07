@@ -6,6 +6,7 @@
 #include <pb.h>
 #include "meshtastic/config.pb.h"
 #include "meshtastic/destinations.pb.h"
+#include "meshtastic/lora_config.pb.h"
 #include "meshtastic/module_config.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
@@ -31,7 +32,7 @@ typedef struct _meshtastic_LocalConfig {
     meshtastic_Config_DisplayConfig display;
     /* The part of the config that is specific to the Lora Radio */
     bool has_lora;
-    meshtastic_Config_LoRaConfig lora;
+    meshtastic_LoRaConfig lora;
     /* The part of the config that is specific to the Bluetooth settings */
     bool has_bluetooth;
     meshtastic_Config_BluetoothConfig bluetooth;
@@ -99,9 +100,9 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define meshtastic_LocalConfig_init_default      {false, meshtastic_Config_DeviceConfig_init_default, false, meshtastic_Config_PositionConfig_init_default, false, meshtastic_Config_PowerConfig_init_default, false, meshtastic_Config_NetworkConfig_init_default, false, meshtastic_Config_DisplayConfig_init_default, false, meshtastic_Config_LoRaConfig_init_default, false, meshtastic_Config_BluetoothConfig_init_default, 0, false, meshtastic_Config_SecurityConfig_init_default, false, meshtastic_DestinationsConfig_init_default}
+#define meshtastic_LocalConfig_init_default      {false, meshtastic_Config_DeviceConfig_init_default, false, meshtastic_Config_PositionConfig_init_default, false, meshtastic_Config_PowerConfig_init_default, false, meshtastic_Config_NetworkConfig_init_default, false, meshtastic_Config_DisplayConfig_init_default, false, meshtastic_LoRaConfig_init_default, false, meshtastic_Config_BluetoothConfig_init_default, 0, false, meshtastic_Config_SecurityConfig_init_default, false, meshtastic_DestinationsConfig_init_default}
 #define meshtastic_LocalModuleConfig_init_default {false, meshtastic_ModuleConfig_MQTTConfig_init_default, false, meshtastic_ModuleConfig_SerialConfig_init_default, false, meshtastic_ModuleConfig_ExternalNotificationConfig_init_default, false, meshtastic_ModuleConfig_StoreForwardConfig_init_default, false, meshtastic_ModuleConfig_RangeTestConfig_init_default, false, meshtastic_ModuleConfig_TelemetryConfig_init_default, false, meshtastic_ModuleConfig_CannedMessageConfig_init_default, 0, false, meshtastic_ModuleConfig_AudioConfig_init_default, false, meshtastic_ModuleConfig_RemoteHardwareConfig_init_default, false, meshtastic_ModuleConfig_NeighborInfoConfig_init_default, false, meshtastic_ModuleConfig_AmbientLightingConfig_init_default, false, meshtastic_ModuleConfig_DetectionSensorConfig_init_default, false, meshtastic_ModuleConfig_PaxcounterConfig_init_default}
-#define meshtastic_LocalConfig_init_zero         {false, meshtastic_Config_DeviceConfig_init_zero, false, meshtastic_Config_PositionConfig_init_zero, false, meshtastic_Config_PowerConfig_init_zero, false, meshtastic_Config_NetworkConfig_init_zero, false, meshtastic_Config_DisplayConfig_init_zero, false, meshtastic_Config_LoRaConfig_init_zero, false, meshtastic_Config_BluetoothConfig_init_zero, 0, false, meshtastic_Config_SecurityConfig_init_zero, false, meshtastic_DestinationsConfig_init_zero}
+#define meshtastic_LocalConfig_init_zero         {false, meshtastic_Config_DeviceConfig_init_zero, false, meshtastic_Config_PositionConfig_init_zero, false, meshtastic_Config_PowerConfig_init_zero, false, meshtastic_Config_NetworkConfig_init_zero, false, meshtastic_Config_DisplayConfig_init_zero, false, meshtastic_LoRaConfig_init_zero, false, meshtastic_Config_BluetoothConfig_init_zero, 0, false, meshtastic_Config_SecurityConfig_init_zero, false, meshtastic_DestinationsConfig_init_zero}
 #define meshtastic_LocalModuleConfig_init_zero   {false, meshtastic_ModuleConfig_MQTTConfig_init_zero, false, meshtastic_ModuleConfig_SerialConfig_init_zero, false, meshtastic_ModuleConfig_ExternalNotificationConfig_init_zero, false, meshtastic_ModuleConfig_StoreForwardConfig_init_zero, false, meshtastic_ModuleConfig_RangeTestConfig_init_zero, false, meshtastic_ModuleConfig_TelemetryConfig_init_zero, false, meshtastic_ModuleConfig_CannedMessageConfig_init_zero, 0, false, meshtastic_ModuleConfig_AudioConfig_init_zero, false, meshtastic_ModuleConfig_RemoteHardwareConfig_init_zero, false, meshtastic_ModuleConfig_NeighborInfoConfig_init_zero, false, meshtastic_ModuleConfig_AmbientLightingConfig_init_zero, false, meshtastic_ModuleConfig_DetectionSensorConfig_init_zero, false, meshtastic_ModuleConfig_PaxcounterConfig_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
@@ -149,7 +150,7 @@ X(a, STATIC,   OPTIONAL, MESSAGE,  destinations,     10)
 #define meshtastic_LocalConfig_power_MSGTYPE meshtastic_Config_PowerConfig
 #define meshtastic_LocalConfig_network_MSGTYPE meshtastic_Config_NetworkConfig
 #define meshtastic_LocalConfig_display_MSGTYPE meshtastic_Config_DisplayConfig
-#define meshtastic_LocalConfig_lora_MSGTYPE meshtastic_Config_LoRaConfig
+#define meshtastic_LocalConfig_lora_MSGTYPE meshtastic_LoRaConfig
 #define meshtastic_LocalConfig_bluetooth_MSGTYPE meshtastic_Config_BluetoothConfig
 #define meshtastic_LocalConfig_security_MSGTYPE meshtastic_Config_SecurityConfig
 #define meshtastic_LocalConfig_destinations_MSGTYPE meshtastic_DestinationsConfig
@@ -194,7 +195,7 @@ extern const pb_msgdesc_t meshtastic_LocalModuleConfig_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_LOCALONLY_PB_H_MAX_SIZE meshtastic_LocalConfig_size
-#define meshtastic_LocalConfig_size              985
+#define meshtastic_LocalConfig_size              1060
 #define meshtastic_LocalModuleConfig_size        669
 
 #ifdef __cplusplus

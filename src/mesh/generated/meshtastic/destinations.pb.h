@@ -4,6 +4,7 @@
 #ifndef PB_MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_INCLUDED
 #define PB_MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_INCLUDED
 #include <pb.h>
+#include "meshtastic/lora_config.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
 #error Regenerate this file with the current version of nanopb generator.
@@ -28,6 +29,9 @@ typedef struct _meshtastic_DestinationsConfig_MeshDestination {
  This should ordinarily be the closest reliable node to the destination. */
     bool has_last_leap;
     uint32_t last_leap;
+    /* LoRa modem settings to switch out temporarily for messages sent to this destination. */
+    bool has_lora_switch;
+    meshtastic_LoRaConfigLite lora_switch;
 } meshtastic_DestinationsConfig_MeshDestination;
 
 typedef struct _meshtastic_DestinationsConfig {
@@ -47,6 +51,8 @@ typedef struct _meshtastic_DestinationsConfig {
     /* Can be used to specify a dedicated channel to send leap messages on. Intended for backwards compatbility with leap-naive nodes.
  The leap channel should accordingly not use the default AQ== PSK. */
     uint8_t leap_channel;
+    /* Whether to allow LoRa channel switching for destinations */
+    bool lora_switch_enabled;
 } meshtastic_DestinationsConfig;
 
 
@@ -55,10 +61,10 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default}, 0, 0}
-#define meshtastic_DestinationsConfig_MeshDestination_init_default {0, false, 0, false, 0, false, 0, false, 0}
-#define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero}, 0, 0}
-#define meshtastic_DestinationsConfig_MeshDestination_init_zero {0, false, 0, false, 0, false, 0, false, 0}
+#define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default}, 0, 0, 0}
+#define meshtastic_DestinationsConfig_MeshDestination_init_default {0, false, 0, false, 0, false, 0, false, 0, false, meshtastic_LoRaConfigLite_init_default}
+#define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero}, 0, 0, 0}
+#define meshtastic_DestinationsConfig_MeshDestination_init_zero {0, false, 0, false, 0, false, 0, false, 0, false, meshtastic_LoRaConfigLite_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_DestinationsConfig_MeshDestination_num_tag 1
@@ -66,6 +72,7 @@ extern "C" {
 #define meshtastic_DestinationsConfig_MeshDestination_next_hop_tag 3
 #define meshtastic_DestinationsConfig_MeshDestination_first_leap_tag 4
 #define meshtastic_DestinationsConfig_MeshDestination_last_leap_tag 5
+#define meshtastic_DestinationsConfig_MeshDestination_lora_switch_tag 6
 #define meshtastic_DestinationsConfig_default_dest_tag 1
 #define meshtastic_DestinationsConfig_nodeinfo_dest_tag 2
 #define meshtastic_DestinationsConfig_telemetry_dest_tag 3
@@ -73,6 +80,7 @@ extern "C" {
 #define meshtastic_DestinationsConfig_destinations_tag 5
 #define meshtastic_DestinationsConfig_leaps_enabled_tag 6
 #define meshtastic_DestinationsConfig_leap_channel_tag 7
+#define meshtastic_DestinationsConfig_lora_switch_enabled_tag 8
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_DestinationsConfig_FIELDLIST(X, a) \
@@ -82,7 +90,8 @@ X(a, STATIC,   SINGULAR, UINT32,   telemetry_dest,    3) \
 X(a, STATIC,   SINGULAR, UINT32,   position_dest,     4) \
 X(a, STATIC,   REPEATED, MESSAGE,  destinations,      5) \
 X(a, STATIC,   SINGULAR, BOOL,     leaps_enabled,     6) \
-X(a, STATIC,   SINGULAR, UINT32,   leap_channel,      7)
+X(a, STATIC,   SINGULAR, UINT32,   leap_channel,      7) \
+X(a, STATIC,   SINGULAR, BOOL,     lora_switch_enabled,   8)
 #define meshtastic_DestinationsConfig_CALLBACK NULL
 #define meshtastic_DestinationsConfig_DEFAULT NULL
 #define meshtastic_DestinationsConfig_destinations_MSGTYPE meshtastic_DestinationsConfig_MeshDestination
@@ -92,9 +101,11 @@ X(a, STATIC,   SINGULAR, UINT32,   num,               1) \
 X(a, STATIC,   OPTIONAL, UINT32,   hop_limit,         2) \
 X(a, STATIC,   OPTIONAL, UINT32,   next_hop,          3) \
 X(a, STATIC,   OPTIONAL, UINT32,   first_leap,        4) \
-X(a, STATIC,   OPTIONAL, UINT32,   last_leap,         5)
+X(a, STATIC,   OPTIONAL, UINT32,   last_leap,         5) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  lora_switch,       6)
 #define meshtastic_DestinationsConfig_MeshDestination_CALLBACK NULL
 #define meshtastic_DestinationsConfig_MeshDestination_DEFAULT NULL
+#define meshtastic_DestinationsConfig_MeshDestination_lora_switch_MSGTYPE meshtastic_LoRaConfigLite
 
 extern const pb_msgdesc_t meshtastic_DestinationsConfig_msg;
 extern const pb_msgdesc_t meshtastic_DestinationsConfig_MeshDestination_msg;
@@ -105,8 +116,8 @@ extern const pb_msgdesc_t meshtastic_DestinationsConfig_MeshDestination_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_MAX_SIZE meshtastic_DestinationsConfig_size
-#define meshtastic_DestinationsConfig_MeshDestination_size 24
-#define meshtastic_DestinationsConfig_size       237
+#define meshtastic_DestinationsConfig_MeshDestination_size 33
+#define meshtastic_DestinationsConfig_size       311
 
 #ifdef __cplusplus
 } /* extern "C" */

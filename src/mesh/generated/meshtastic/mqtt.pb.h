@@ -5,6 +5,7 @@
 #define PB_MESHTASTIC_MESHTASTIC_MQTT_PB_H_INCLUDED
 #include <pb.h>
 #include "meshtastic/config.pb.h"
+#include "meshtastic/lora_config.pb.h"
 #include "meshtastic/mesh.pb.h"
 
 #if PB_PROTO_HEADER_VERSION != 40
@@ -38,9 +39,9 @@ typedef struct _meshtastic_MapReport {
     /* Device firmware version string */
     char firmware_version[18];
     /* The region code for the radio (US, CN, EU433, etc...) */
-    meshtastic_Config_LoRaConfig_RegionCode region;
+    meshtastic_LoRaConfig_RegionCode region;
     /* Modem preset used by the radio (LongFast, MediumSlow, etc...) */
-    meshtastic_Config_LoRaConfig_ModemPreset modem_preset;
+    meshtastic_LoRaConfig_ModemPreset modem_preset;
     /* Whether the node has a channel with default PSK and name (LongFast, MediumSlow, etc...)
  and it uses the default frequency slot given the region and modem preset. */
     bool has_default_channel;
@@ -66,9 +67,9 @@ extern "C" {
 
 /* Initializer values for message structs */
 #define meshtastic_ServiceEnvelope_init_default  {NULL, NULL, NULL}
-#define meshtastic_MapReport_init_default        {"", "", _meshtastic_Config_DeviceConfig_Role_MIN, _meshtastic_HardwareModel_MIN, "", _meshtastic_Config_LoRaConfig_RegionCode_MIN, _meshtastic_Config_LoRaConfig_ModemPreset_MIN, 0, 0, 0, 0, 0, 0, 0}
+#define meshtastic_MapReport_init_default        {"", "", _meshtastic_Config_DeviceConfig_Role_MIN, _meshtastic_HardwareModel_MIN, "", _meshtastic_LoRaConfig_RegionCode_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_ServiceEnvelope_init_zero     {NULL, NULL, NULL}
-#define meshtastic_MapReport_init_zero           {"", "", _meshtastic_Config_DeviceConfig_Role_MIN, _meshtastic_HardwareModel_MIN, "", _meshtastic_Config_LoRaConfig_RegionCode_MIN, _meshtastic_Config_LoRaConfig_ModemPreset_MIN, 0, 0, 0, 0, 0, 0, 0}
+#define meshtastic_MapReport_init_zero           {"", "", _meshtastic_Config_DeviceConfig_Role_MIN, _meshtastic_HardwareModel_MIN, "", _meshtastic_LoRaConfig_RegionCode_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, 0, 0, 0, 0, 0, 0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_ServiceEnvelope_packet_tag    1
@@ -126,7 +127,7 @@ extern const pb_msgdesc_t meshtastic_MapReport_msg;
 /* Maximum encoded size of messages (where known) */
 /* meshtastic_ServiceEnvelope_size depends on runtime parameters */
 #define MESHTASTIC_MESHTASTIC_MQTT_PB_H_MAX_SIZE meshtastic_MapReport_size
-#define meshtastic_MapReport_size                110
+#define meshtastic_MapReport_size                111
 
 #ifdef __cplusplus
 } /* extern "C" */
