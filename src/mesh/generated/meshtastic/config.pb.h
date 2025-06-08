@@ -809,7 +809,7 @@ extern const pb_msgdesc_t meshtastic_Config_SessionkeyConfig_msg;
 #define meshtastic_Config_PowerConfig_size       52
 #define meshtastic_Config_SecurityConfig_size    178
 #define meshtastic_Config_SessionkeyConfig_size  0
-#define meshtastic_Config_size                   314
+#define meshtastic_Config_size                   318
 
 #ifdef __cplusplus
 } /* extern "C" */
