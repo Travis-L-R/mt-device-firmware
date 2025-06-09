@@ -161,7 +161,7 @@ class RadioInterface
     /// Initialise the Driver transport hardware and software.
     /// Make sure the Driver is properly configured before calling init().
     /// \return true if initialisation succeeded.
-    virtual bool init();
+    virtual bool init(meshtastic_LoRaConfigLite *c = nullptr);
 
     /// Apply any radio provisioning changes
     /// Make sure the Driver is properly configured before calling init().
@@ -248,7 +248,7 @@ class RadioInterface
      *
      * These parameters will be pull from the channelSettings global
      */
-    void applyModemConfig();
+    void applyModemConfig(meshtastic_LoRaConfigLite *c = nullptr);
 
     /// Return 0 if sleep is okay
     int preflightSleepCb(void *unused = NULL) { return canSleep() ? 0 : 1; }

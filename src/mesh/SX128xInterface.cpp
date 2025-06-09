@@ -28,7 +28,7 @@ SX128xInterface<T>::SX128xInterface(LockingArduinoHal *hal, RADIOLIB_PIN_TYPE cs
 /// Initialise the Driver transport hardware and software.
 /// Make sure the Driver is properly configured before calling init().
 /// \return true if initialisation succeeded.
-template <typename T> bool SX128xInterface<T>::init()
+template <typename T> bool SX128xInterface<T>::init(meshtastic_LoRaConfigLite *c)
 {
 #ifdef SX128X_POWER_EN
     pinMode(SX128X_POWER_EN, OUTPUT);
@@ -60,7 +60,7 @@ template <typename T> bool SX128xInterface<T>::init()
 #endif
 #endif
 
-    RadioLibInterface::init();
+    RadioLibInterface::init(c);
 
     limitPower();
 

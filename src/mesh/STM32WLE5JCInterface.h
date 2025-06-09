@@ -13,7 +13,7 @@ class STM32WLE5JCInterface : public SX126xInterface<STM32WLx>
     STM32WLE5JCInterface(LockingArduinoHal *hal, RADIOLIB_PIN_TYPE cs, RADIOLIB_PIN_TYPE irq, RADIOLIB_PIN_TYPE rst,
                          RADIOLIB_PIN_TYPE busy);
 
-    virtual bool init() override;
+    virtual bool init(meshtastic_LoRaConfigLite *c = nullptr) override;
 };
 
 /* https://wiki.seeedstudio.com/LoRa-E5_STM32WLE5JC_Module/

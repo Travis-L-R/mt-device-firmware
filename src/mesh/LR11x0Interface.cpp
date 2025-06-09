@@ -47,7 +47,7 @@ LR11x0Interface<T>::LR11x0Interface(LockingArduinoHal *hal, RADIOLIB_PIN_TYPE cs
 /// Initialise the Driver transport hardware and software.
 /// Make sure the Driver is properly configured before calling init().
 /// \return true if initialisation succeeded.
-template <typename T> bool LR11x0Interface<T>::init()
+template <typename T> bool LR11x0Interface<T>::init(meshtastic_LoRaConfigLite *c)
 {
 #ifdef LR11X0_POWER_EN
     pinMode(LR11X0_POWER_EN, OUTPUT);
@@ -69,7 +69,7 @@ template <typename T> bool LR11x0Interface<T>::init()
     // (DIO3 is not free to be used as an IRQ)
 #endif
 
-    RadioLibInterface::init();
+    RadioLibInterface::init(c);
 
     limitPower();
 

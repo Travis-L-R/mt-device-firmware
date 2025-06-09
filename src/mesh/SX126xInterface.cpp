@@ -29,7 +29,7 @@ SX126xInterface<T>::SX126xInterface(LockingArduinoHal *hal, RADIOLIB_PIN_TYPE cs
 /// Initialise the Driver transport hardware and software.
 /// Make sure the Driver is properly configured before calling init().
 /// \return true if initialisation succeeded.
-template <typename T> bool SX126xInterface<T>::init()
+template <typename T> bool SX126xInterface<T>::init(meshtastic_LoRaConfigLite *c)
 {
 
 // Typically, the RF switch on SX126x boards is controlled by two signals, which are negations of each other (switched RFIO
@@ -67,7 +67,7 @@ template <typename T> bool SX126xInterface<T>::init()
     // FIXME: May want to set depending on a definition, currently all SX126x variant files use the DC-DC regulator option
     bool useRegulatorLDO = false; // Seems to depend on the connection to pin 9/DCC_SW - if an inductor DCDC?
 
-    RadioLibInterface::init();
+    RadioLibInterface::init(c);
 
     limitPower();
 

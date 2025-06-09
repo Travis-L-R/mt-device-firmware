@@ -14,9 +14,9 @@ STM32WLE5JCInterface::STM32WLE5JCInterface(LockingArduinoHal *hal, RADIOLIB_PIN_
 {
 }
 
-bool STM32WLE5JCInterface::init()
+bool STM32WLE5JCInterface::init(meshtastic_LoRaConfigLite *c)
 {
-    RadioLibInterface::init();
+    RadioLibInterface::init(c);
 
 // https://github.com/Seeed-Studio/LoRaWan-E5-Node/blob/main/Middlewares/Third_Party/SubGHz_Phy/stm32_radio_driver/radio_driver.c
 #if (!defined(_VARIANT_RAK3172_))

@@ -364,7 +364,7 @@ bool RadioInterface::reconfigure()
     return true;
 }
 
-bool RadioInterface::init()
+bool RadioInterface::init(meshtastic_LoRaConfigLite *c)
 {
     LOG_INFO("Start meshradio init");
 
@@ -438,7 +438,7 @@ uint32_t RadioInterface::getChannelNum()
 /**
  * Pull our channel settings etc... from protobufs to the dumb interface settings
  */
-void RadioInterface::applyModemConfig()
+void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
 {
     // Set up default configuration
     // No Sync Words in LORA mode

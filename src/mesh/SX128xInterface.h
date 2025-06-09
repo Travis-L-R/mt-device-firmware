@@ -15,7 +15,7 @@ template <class T> class SX128xInterface : public RadioLibInterface
     /// Initialise the Driver transport hardware and software.
     /// Make sure the Driver is properly configured before calling init().
     /// \return true if initialisation succeeded.
-    virtual bool init() override;
+    virtual bool init(meshtastic_LoRaConfigLite *c = nullptr) override;
 
     virtual bool wideLora() override;
 

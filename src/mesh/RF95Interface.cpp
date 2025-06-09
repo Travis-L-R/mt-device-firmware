@@ -111,9 +111,9 @@ void RF95Interface::setTransmitEnable(bool txon)
 /// Initialise the Driver transport hardware and software.
 /// Make sure the Driver is properly configured before calling init().
 /// \return true if initialisation succeeded.
-bool RF95Interface::init()
+bool RF95Interface::init(meshtastic_LoRaConfigLite *c)
 {
-    RadioLibInterface::init();
+    RadioLibInterface::init(c);
 
 #if defined(RADIOMASTER_900_BANDIT_NANO) || defined(RADIOMASTER_900_BANDIT)
     // DAC and DB values based on dBm using interpolation
