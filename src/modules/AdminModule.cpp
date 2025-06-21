@@ -723,7 +723,7 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
         config.security = c.payload_variant.security;
 #if !(MESHTASTIC_EXCLUDE_PKI_KEYGEN) && !(MESHTASTIC_EXCLUDE_PKI)
         // If the client set the key to blank, go ahead and regenerate so long as we're not in ham mode
-        if (!owner.is_licensed && config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+        if (!owner.is_licensed && config.lora.region != meshtastic_LoRaConfig_RegionCode_UNSET) {
             if (config.security.private_key.size != 32) {
                 crypto->generateKeyPair(config.security.public_key.bytes, config.security.private_key.bytes);
 
