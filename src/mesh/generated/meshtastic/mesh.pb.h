@@ -267,15 +267,6 @@ typedef enum _meshtastic_HardwareModel {
     /* *
  GAT562 Mesh Trial Tracker */
     meshtastic_HardwareModel_GAT562_MESH_TRIAL_TRACKER = 104,
-    /* *
- Lilygo T-Deck Pro */
-    meshtastic_HardwareModel_T_DECK_PRO = 102,
-    /* *
- Lilygo TLora Pager */
-    meshtastic_HardwareModel_T_LORA_PAGER = 103,
-    /* *
- GAT562 Mesh Trial Tracker */
-    meshtastic_HardwareModel_GAT562_MESH_TRIAL_TRACKER = 104,
     /* ------------------------------------------------------------------------------------------------------------------------------------------
  Reserved ID For developing private Ports. These will show up in live traffic sparsely, so we can use a high number. Keep it within 8 bits.
  ------------------------------------------------------------------------------------------------------------------------------------------ */
