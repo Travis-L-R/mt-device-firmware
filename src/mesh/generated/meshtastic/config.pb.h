@@ -107,6 +107,23 @@ typedef enum _meshtastic_Config_DeviceConfig_BuzzerMode {
     meshtastic_Config_DeviceConfig_BuzzerMode_SYSTEM_ONLY = 3
 } meshtastic_Config_DeviceConfig_BuzzerMode;
 
+/* Defines buzzer behavior for audio feedback */
+typedef enum _meshtastic_Config_DeviceConfig_BuzzerMode {
+    /* Default behavior.
+ Buzzer is enabled for all audio feedback including button presses and alerts. */
+    meshtastic_Config_DeviceConfig_BuzzerMode_ALL_ENABLED = 0,
+    /* Disabled.
+ All buzzer audio feedback is disabled. */
+    meshtastic_Config_DeviceConfig_BuzzerMode_DISABLED = 1,
+    /* Notifications Only.
+ Buzzer is enabled only for notifications and alerts, but not for button presses.
+ External notification config determines the specifics of the notification behavior. */
+    meshtastic_Config_DeviceConfig_BuzzerMode_NOTIFICATIONS_ONLY = 2,
+    /* Non-notification system buzzer tones only.
+ Buzzer is enabled only for non-notification tones such as button presses, startup, shutdown, but not for alerts. */
+    meshtastic_Config_DeviceConfig_BuzzerMode_SYSTEM_ONLY = 3
+} meshtastic_Config_DeviceConfig_BuzzerMode;
+
 /* Bit field of boolean configuration options, indicating which optional
  fields to include when assembling POSITION messages.
  Longitude, latitude, altitude, speed, heading, and DOP
