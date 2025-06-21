@@ -729,6 +729,7 @@ void setup()
     scannerToSensorsMap(i2cScanner, ScanI2C::DeviceType::DFROBOT_RAIN, meshtastic_TelemetrySensorType_DFROBOT_RAIN);
     scannerToSensorsMap(i2cScanner, ScanI2C::DeviceType::LTR390UV, meshtastic_TelemetrySensorType_LTR390UV);
     scannerToSensorsMap(i2cScanner, ScanI2C::DeviceType::DPS310, meshtastic_TelemetrySensorType_DPS310);
+    scannerToSensorsMap(i2cScanner, ScanI2C::DeviceType::RAK12035, meshtastic_TelemetrySensorType_RAK12035);
     scannerToSensorsMap(i2cScanner, ScanI2C::DeviceType::PCT2075, meshtastic_TelemetrySensorType_PCT2075);
 
     i2cScanner.reset();
@@ -927,6 +928,11 @@ void setup()
 #endif
     service = new MeshService();
     service->init();
+
+    if (nodeDB->keyIsLowEntropy) {
+        service->reloadConfig(SEGMENT_CONFIG);
+        rebootAtMsec = (millis() + DEFAULT_REBOOT_SECONDS * 1000);
+    }
 
     // Now that the mesh service is created, create any modules
     setupModules();
