@@ -844,7 +844,12 @@ void NodeDB::installDefaultModuleConfig()
 #endif
 
     moduleConfig.has_neighbor_info = true;
+    #if !USERPREFS_ENABLE_NEIGHBOR_INFO_BY_DEFAULT
     moduleConfig.neighbor_info.enabled = false;
+    #else
+    moduleConfig.neighbor_info.enabled = true;
+    moduleConfig.neighbor_info.transmit_over_lora = true;
+    #endif
 
     moduleConfig.has_detection_sensor = true;
     moduleConfig.detection_sensor.enabled = false;

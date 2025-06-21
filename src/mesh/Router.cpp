@@ -941,6 +941,13 @@ NodeNum Router::getNodeNum()
  */
 void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 {
+    #if USERPREFS_UPLINK_REPEAT_PACKETS
+    // replicate the disabled part of the filtering of perhapsHandleReceived if the source is from the radio
+    bool shouldFilter = src == RX_SRC_RADIO && (p->from == NODENUM_BROADCAST || shouldFilterReceived(p));
+    if (shouldFilter) {
+        LOG_DEBUG("Incoming msg will be filtered, from 0x%x", p->from);
+    }
+    #endif
     bool skipHandle = false;
     // Also, we should set the time from the ISR and it should have msec level resolution
     p->rx_time = getValidTime(RTCQualityFromNet); // store the arrival timestamp for the phone
@@ -990,9 +997,18 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         printPacket("packet decoding failed or skipped (no PSK?)", p);
     }
 
-    // call modules here
+#if USERPREFS_UPLINK_REPEAT_PACKETS
+    if (!skipHandle) {
+        // don't have the other modules do anything if this should have been filtered
+        // todo: check that this doesn't break things, like position blurring
+        if (!shouldFilter) {
+            MeshModule::callModules(*p, src);
+        }
+
+#else 
     if (!skipHandle) {
         MeshModule::callModules(*p, src);
+#endif
 
 #if !MESHTASTIC_EXCLUDE_MQTT
         // Mark as pki_encrypted if it is not yet decoded and MQTT encryption is also enabled, hash matches and it's a DM not to
@@ -1000,11 +1016,18 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         if (decodedState == DecodeState::DECODE_FAILURE && moduleConfig.mqtt.encryption_enabled && p->channel == 0x00 &&
             !isBroadcast(p->to) && !isToUs(p))
             p_encrypted->pki_encrypted = true;
+
         // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
+#if !USERPREFS_UPLINK_ALL_PACKETS
         if ((decodedState == DecodeState::DECODE_SUCCESS || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled &&
             !isFromUs(p) && mqtt)
+#else
+        if ((decodedState == DecodeState::DECODE_SUCCESS || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled &&
+            !isFromUs(p) && mqtt)
+#endif
             mqtt->onSend(*p_encrypted, *p, p->channel);
 #endif
+
     }
 
     packetPool.release(p_encrypted); // Release the encrypted packet
@@ -1037,11 +1060,13 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
+#if USERPREFS_UPLINK_ALL_PACKETS
     if (p->from == NODENUM_BROADCAST) {
         LOG_DEBUG("Ignore msg from broadcast address");
         packetPool.release(p);
         return;
     }
+#endif
 
     if (config.lora.ignore_mqtt && p->via_mqtt) {
         LOG_DEBUG("Msg came in via MQTT from 0x%x", p->from);
@@ -1049,11 +1074,13 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
+#if !USERPREFS_UPLINK_REPEAT_PACKETS
     if (shouldFilterReceived(p)) {
         LOG_DEBUG("Incoming msg was filtered from 0x%x", p->from);
         packetPool.release(p);
         return;
     }
+#endif
 
     // Note: we avoid calling shouldFilterReceived if we are supposed to ignore certain nodes - because some overrides might
     // cache/learn of the existence of nodes (i.e. FloodRouter) that they should not

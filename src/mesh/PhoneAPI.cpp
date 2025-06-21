@@ -662,14 +662,16 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
             LOG_DEBUG("Ignore packet from phone, already seen recently");
             return false;
         }
-
+    
     if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && lastPortNumToRadio[p.decoded.portnum] &&
         Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], THIRTY_SECONDS_MS)) {
+#if !USERPREFS_DISABLE_TRACEROUTE_THROTTLE
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
         sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "TraceRoute can only be sent once every 30 seconds");
         meshtastic_QueueStatus qs = router->getQueueStatus();
         service->sendQueueStatusToPhone(qs, 0, p.id);
         return false;
+#endif
     } else if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && isBroadcast(p.to) && p.hop_limit > 0) {
         sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "Multi-hop traceroute to broadcast address is not allowed");
         meshtastic_QueueStatus qs = router->getQueueStatus();
@@ -678,6 +680,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
     } else if (IS_ONE_OF(meshtastic_PortNum_POSITION_APP, meshtastic_PortNum_WAYPOINT_APP, meshtastic_PortNum_ALERT_APP) &&
                lastPortNumToRadio[p.decoded.portnum] &&
                Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], TEN_SECONDS_MS)) {
+#if !USERPREFS_DISABLE_POSITION_THROTTLE
         // TODO: [Issue #6700] Make this rate limit throttling scale up / down with the preset
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
         meshtastic_QueueStatus qs = router->getQueueStatus();
@@ -685,6 +688,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
         // FIXME: Figure out why this continues to happen
         // sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "Position can only be sent once every 5 seconds");
         return false;
+#endif
     }
     lastPortNumToRadio[p.decoded.portnum] = millis();
     service->handleToRadio(p);

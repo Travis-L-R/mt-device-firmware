@@ -1,40 +1,61 @@
-<div align="center" markdown="1">
-
-<img src=".github/meshtastic_logo.png" alt="Meshtastic Logo" width="80"/>
-<h1>Meshtastic Firmware</h1>
-
-![GitHub release downloads](https://img.shields.io/github/downloads/meshtastic/firmware/total)
-[![CI](https://img.shields.io/github/actions/workflow/status/meshtastic/firmware/main_matrix.yml?branch=master&label=actions&logo=github&color=yellow)](https://github.com/meshtastic/firmware/actions/workflows/ci.yml)
-[![CLA assistant](https://cla-assistant.io/readme/badge/meshtastic/firmware)](https://cla-assistant.io/meshtastic/firmware)
-[![Fiscal Contributors](https://opencollective.com/meshtastic/tiers/badge.svg?label=Fiscal%20Contributors&color=deeppink)](https://opencollective.com/meshtastic/)
-[![Vercel](https://img.shields.io/static/v1?label=Powered%20by&message=Vercel&style=flat&logo=vercel&color=000000)](https://vercel.com?utm_source=meshtastic&utm_campaign=oss)
-
-<a href="https://trendshift.io/repositories/5524" target="_blank"><img src="https://trendshift.io/api/badge/repositories/5524" alt="meshtastic%2Ffirmware | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-</div>
-
-</div>
-
-<div align="center">
-	<a href="https://meshtastic.org">Website</a>
-	-
-	<a href="https://meshtastic.org/docs/">Documentation</a>
-</div>
-
 ## Overview
 
-This repository contains the official device firmware for Meshtastic, an open-source LoRa mesh networking project designed for long-range, low-power communication without relying on internet or cellular infrastructure. The firmware supports various hardware platforms, including ESP32, nRF52, RP2040/RP2350, and Linux-based devices.
+This repository contains a modified version of the [Meshtastic project's](https://meshtastic.org/) device [firmware](https://github.com/meshtastic/firmware), to allow for:
 
-Meshtastic enables text messaging, location sharing, and telemetry over a decentralized mesh network, making it ideal for outdoor adventures, emergency preparedness, and remote operations.
+- Removing certain constraints that may get in the way of development and analytic purposes.
+- NeighborInfo broadcasts going out on the default channel, and the option to enable them by default.
+- Having reduced position precision for specified private locations.
 
-### Get Started
+## Usage
 
-- 🔧 **[Building Instructions](https://meshtastic.org/docs/development/firmware/build)** – Learn how to compile the firmware from source.
-- ⚡ **[Flashing Instructions](https://meshtastic.org/docs/getting-started/flashing-firmware/)** – Install or update the firmware on your device.
+Modify the **userPrefs.jsonc** file to uncomment and set the options that you want enabled.
 
-Join our community and help improve Meshtastic! 🚀
+## Option description
 
-## Stats
+### Analytics options
 
-![Alt](https://repobeats.axiom.co/api/embed/8025e56c482ec63541593cc5bd322c19d5c0bdcf.svg "Repobeats analytics image")
+- USERPREFS_ALLOW_NODENUM_ASSIGNMENT: Set to true if you have some app that needs to be able to set node IDs on sent packets. E.g. [meshpipe](https://github.com/armooo/meshpipe).
+- USERPREFS_DISABLE_TRACEROUTE_THROTTLE: Removes the restriction on sending traceroutes too frequently.
+- USERPREFS_DISABLE_POSITION_THROTTLE: Removes the restriction on sending position data too frequently. (Also affects waypoint and alert frequency throttles.)
+- USERPREFS_TRANSGRESS_OK_TO_MQTT: Disregards the OK_TO_MQTT bitfield flag (unless you're using the default MQTT server, in which case it will still respect it).
+- USERPREFS_UPLINK_ALL_CHANNELS: Normally only decrypted packets that match a channel are uplinked to MQTT. This option will uplink all decrypted channels, even if unknown. Though if it's a known channel and you don't have uplink_enabled then it shouldn't uplink it (so that you can still have private, non-uplinked channels).
+- USERPREFS_UPLINK_ALL_PACKETS: Undecrypted packets to broadcast are not normally uplinked, nor are messages "from broadcast". This option allows that.
+- USERPREFS_UPLINK_REPEAT_PACKET: Nodes ordinarily only uplink the first transmission of a packet that they see. With this option, each rebroadcast is uplinked (without getting rebroadcast or re-handled by our node again). Useful for identifying repeated broadcasts and the RSSI/SNR of them.
 
+### NeighborInfo options
+
+- USERPREFS_ENABLE_NEIGHBOR_INFO_BY_DEFAULT: As the name suggests, devices installed with this firmware will have neighbor info enabled by default, but also it will be enabled over lora by default.
+- USERPREFS_ALLOW_NEIGHBOR_INFO_ON_DEFAULT_CHANNEL: Normally NeighborInfo is disabled on the default channel, this option alters that.
+
+### Private position masks
+
+Up to 8 hard-coded locations can be set to have a lower level of precision than what you have set generally for position data precision.
+
+With a basic configuration of
+
+```
+"USERPREFS_APPLY_POSITION_MASKS": "true",
+"USERPREFS_POSITION_MASK_0_LAT": "-12.3456789",
+"USERPREFS_POSITION_MASK_0_LON": "123.4567890",
+"USERPREFS_POSITION_MASK_0_BITS": "13",
+```
+
+if you go within 13-bits of precision of -12.3456789, 123.4567890 then your reported precision data will be reduced to 13-bits.
+
+This allows you to reduce the precision when you are near private locations (e.g. home, work, houses of friends and family).
+
+By default, these masks apply for _all_ channels. The additional USERPREFS_MASK_POS_EVEN_WHEN_PRECISE setting can be set to false if you only want to blur the precision when your channel is not set to precise positioning. This way, you can have precise positioning on a private channel with no masks and at the same time have another imprecise channel where these additional masks will be applied.
+
+**Warning**: These masks are only applied to position packets. They are not applied to MQTT map reports.
+
+**Note**: You don't have to specify the actual lat/lon of the location you are looking to obscure for the mask, just any lat/lon within the bit-precision rectangle that is created by the mask.
+
+**Note**: Since the default MQTT server drops high-precision position data, using these masks may have an unintended effect: positions away from your specified locations may not be seen on maps that use data from the default server, but positions within the masked areas might.
+
+### Other settings
+
+Best not to change these unnecessarily:
+
+- USERPREFS_MAX_CHANNEL_UTIL_PERCENT: Override for the upper limit on channel util at which nodes will not transmit non-critical messages.
+- USERPREFS_POLITE_CHANNEL_UTIL_PERCENT: Override for the lower limit (applies to certain node roles).
+- USERPREFS_POLITE_DUTY_CYCLE_PERCENT: Override for the limit on airtime usage.
