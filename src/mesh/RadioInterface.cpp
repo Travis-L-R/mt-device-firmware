@@ -358,9 +358,9 @@ RadioInterface::RadioInterface()
     assert(sizeof(PacketHeader) == MESHTASTIC_HEADER_LENGTH); // make sure the compiler did what we expected
 }
 
-bool RadioInterface::reconfigure()
+bool RadioInterface::reconfigure(meshtastic_LoRaConfigLite *lcl)
 {
-    applyModemConfig();
+     applyModemConfig(lcl);
     return true;
 }
 
@@ -376,7 +376,7 @@ bool RadioInterface::init(meshtastic_LoRaConfigLite *c)
     // radioIf.setThisAddress(nodeDB->getNodeNum()); // Note: we must do this here, because the nodenum isn't inited at
     // constructor time.
 
-    applyModemConfig();
+    applyModemConfig(c);
 
     return true;
 }
@@ -420,6 +420,14 @@ void RadioInterface::saveChannelNum(uint32_t channel_num)
 }
 
 /**
+ * Save our modemPreset for later reuse.
+ */
+void RadioInterface::saveModemPreset(meshtastic_LoRaConfig_ModemPreset preset)
+{
+    savedModemPreset = preset;
+}
+
+/**
  * Save our frequency for later reuse.
  */
 float RadioInterface::getFreq()
@@ -436,18 +444,32 @@ uint32_t RadioInterface::getChannelNum()
 }
 
 /**
+ * Return our saved modem preset
+ */
+meshtastic_LoRaConfig_ModemPreset RadioInterface::getModemPreset()
+{
+    return savedModemPreset;
+}
+
+/**
  * Pull our channel settings etc... from protobufs to the dumb interface settings
  */
 void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
 {
+    LOG_ERROR("applyModemconfig %u/%u", c->modem_preset, c->channel_num);
     // Set up default configuration
     // No Sync Words in LORA mode
     meshtastic_LoRaConfig &loraConfig = config.lora;
     bool validConfig = false; // We need to check for a valid configuration
+
+    // determine whether we are using the configured preset/channel or any supplied ones
+    uint32_t channel_num = c ? c->channel_num : loraConfig.channel_num;
+    meshtastic_LoRaConfig_ModemPreset preset = c ? c->modem_preset : loraConfig.modem_preset;
+
     while (!validConfig) {
         if (loraConfig.use_preset) {
 
-            switch (loraConfig.modem_preset) {
+            switch (preset) {
             case meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO:
                 bw = (myRegion->wideLora) ? 1625.0 : 500;
                 cr = 5;
@@ -489,6 +511,7 @@ void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
                 sf = 12;
                 break;
             }
+            saveModemPreset(preset);
         } else {
             sf = loraConfig.spread_factor;
             cr = loraConfig.coding_rate;
@@ -506,6 +529,7 @@ void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
                 bw = 812.5;
             if (bw == 1600)
                 bw = 1625.0;
+            saveModemPreset(meshtastic_LoRaConfig_ModemPreset_NO_PRESET);
         }
 
         if ((myRegion->freqEnd - myRegion->freqStart) < bw / 1000) {
@@ -521,6 +545,7 @@ void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
             // Set to default modem preset
             loraConfig.use_preset = true;
             loraConfig.modem_preset = meshtastic_LoRaConfig_ModemPreset_LONG_FAST;
+            saveModemPreset(loraConfig.modem_preset);
         } else {
             validConfig = true;
         }
@@ -545,7 +570,7 @@ void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
     // If user has manually specified a channel num, then use that, otherwise generate one by hashing the name
     const char *channelName = channels.getName(channels.getPrimaryIndex());
     // channel_num is actually (channel_num - 1), since modulus (%) returns values from 0 to (numChannels - 1)
-    uint32_t channel_num = (loraConfig.channel_num ? loraConfig.channel_num - 1 : hash(channelName)) % numChannels;
+    channel_num = (channel_num ? channel_num - 1 : hash(channelName)) % numChannels;
 
     // Check if we use the default frequency slot
     RadioInterface::uses_default_frequency_slot =

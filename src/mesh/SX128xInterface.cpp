@@ -110,9 +110,9 @@ template <typename T> bool SX128xInterface<T>::init(meshtastic_LoRaConfigLite *c
     return res == RADIOLIB_ERR_NONE;
 }
 
-template <typename T> bool SX128xInterface<T>::reconfigure()
+template <typename T> bool SX128xInterface<T>::reconfigure(meshtastic_LoRaConfigLite *lcl)
 {
-    RadioLibInterface::reconfigure();
+    RadioLibInterface::reconfigure(lcl);
 
     // set mode to standby
     setStandby();

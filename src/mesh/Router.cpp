@@ -514,6 +514,17 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
             p->channel = config.destinations.leap_channel;
     }
 
+    // Conduct lora switch if configured and the modem settings don't differ from our normal settings
+    if (config.destinations.lora_switch_enabled && dest && dest->has_lora_switch &&
+        (!config.destinations.only_lora_switch_from_us || isFromUs(p)) &&
+        (!config.destinations.only_leap_switch_messages || (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.portnum == meshtastic_PortNum_TEXT_MESSAGE_APP)) &&
+        dest->lora_switch.modem_preset != meshtastic_LoRaConfig_ModemPreset_NO_PRESET &&
+        (dest->lora_switch.modem_preset != config.lora.modem_preset || dest->lora_switch.channel_num != config.lora.channel_num)) {
+        LOG_DEBUG("Destination has lora switch set preset %u chan %u pid %u to 0x%x",
+        dest->lora_switch.modem_preset, dest->lora_switch.channel_num, p->id, p->to);
+        iface->setLoRaSwitchForPacket(p, &dest->lora_switch);
+    }
+
     // If the packet hasn't yet been encrypted, do so now (it might already be encrypted if we are just forwarding it)
 
     if (!(p->which_payload_variant == meshtastic_MeshPacket_encrypted_tag ||

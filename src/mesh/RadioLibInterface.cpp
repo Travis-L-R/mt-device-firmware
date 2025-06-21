@@ -271,20 +271,64 @@ void RadioLibInterface::onNotify(uint32_t notification)
                     // There's still some delay pending on this packet, so resume waiting for it to elapse
                     notifyLater(delay_remaining, TRANSMIT_DELAY_COMPLETED, false);
                 } else {
+                    if (config.has_destinations && config.destinations.lora_switch_enabled) {
+                        meshtastic_LoRaConfigLite *ls = getLoRaSwitchForPacket(txp);
+
+                        if (ls != nullptr) {
+                            LOG_INFO("Got packet %u with LoRa Switch data", txp->id);
+
+                            if (!switchInProgress || switchingPacketId != txp->id) {
+                                LOG_DEBUG("Currently on preset %u, channel %u", getModemPreset(), getChannelNum()+1);
+                                
+                                if (ls->modem_preset == meshtastic_LoRaConfig_ModemPreset_NO_PRESET || 
+                                    ls->channel_num == CHANNEL_NUM_UNSET || 
+                                    (ls->modem_preset == getModemPreset() && 
+                                     ls->channel_num == getChannelNum() + 1)) {
+                                        LOG_DEBUG("No need to switch lora for packet on preset %u channel %u", 
+                                        ls->modem_preset, ls->channel_num+1);
+                                } else {
+                                    LOG_INFO("Configuring modem to preset %u channel %u for LoRa switch", txp->id, txp->to, ls->modem_preset, ls->channel_num);
+
+                                    switchInProgress = ls;
+                                    switchingPacketId = txp->id;
+
+                                    init(ls);
+                                    reconfigure(ls);
+                                }
+                            }
+                        }
+
+                        if (switchInProgress && !ls) {
+                            LOG_INFO("Outdated LoRa switch status, resetting modem");
+                            switchInProgress = nullptr;
+                            init();
+                            reconfigure();
+                        } 
+                    }
+
                     if (isChannelActive()) { // check if there is currently a LoRa packet on the channel
                         startReceive();      // try receiving this packet, afterwards we'll be trying to transmit again
                         setTransmitDelay();
                     } else {
                         // Send any outgoing packets we have ready as fast as possible to keep the time between channel scan and
                         // actual transmission as short as possible
+                        uint32_t old_id = txp->id;
                         txp = txQueue.dequeue();
-                        assert(txp);
-                        bool sent = startSend(txp);
-                        if (sent) {
-                            // Packet has been sent, count it toward our TX airtime utilization.
-                            uint32_t xmitMsec = getPacketTime(txp);
-                            airTime->logAirtime(TX_LOG, xmitMsec);
+                        if (txp && old_id == txp->id) {
+                            bool sent = startSend(txp);
+                            if (sent) {
+                                // Packet has been sent, count it toward our TX airtime utilization.
+                                uint32_t xmitMsec = getPacketTime(txp);
+                                airTime->logAirtime(TX_LOG, xmitMsec);
+                            }
+
+                            if (switchInProgress) {
+                                clearLoRaSwitchForPacket(txp);
+                            }
+                        } else {
+                            LOG_DEBUG("Expected tx packet changed or disappeared"); 
                         }
+
                         LOG_DEBUG("%d packets remain in the TX queue", txQueue.getMaxLen() - txQueue.getFree());
                     }
                 }
@@ -362,6 +406,99 @@ void RadioLibInterface::clampToLateRebroadcastWindow(NodeNum from, PacketId id)
     }
 }
 
+/** Returns the index of the packet in the SwitchBuffer (first instance only, -1 if not found) */
+int RadioLibInterface::findPacketInSwitchBuffer(meshtastic_MeshPacket *p) {
+
+    // No need to do lookup if buffer is empty (end may == start if buffer is full)
+    if (switchBufferEnd == switchBufferStart && switchPacketBuffer[switchBufferStart].id == 0) {
+        return -1;
+    }
+
+    uint pos = switchBufferStart;
+
+    for (int i=0; i<LORA_SWITCH_BUFFER_SIZE; i++) {
+        if (switchPacketBuffer[pos].id != 0 && switchPacketBuffer[pos].id == p->id && switchPacketBuffer[pos].from == p->from) {
+            return pos;
+        }
+
+        pos++;
+        // wraparound back to first half of buffer 
+        if (pos >= LORA_SWITCH_BUFFER_SIZE) {
+            pos = 0;
+        } 
+    }
+
+    return -1;
+}
+
+/** Record that we want to switch radio settings when sending this packet */
+void RadioLibInterface::setLoRaSwitchForPacket(meshtastic_MeshPacket *p, meshtastic_LoRaConfigLite *lora_switch) {
+    //LOG_DEBUG("set LoRaSwitchForPacket id %u", p->id);
+    bool full = switchBufferEnd == switchBufferStart && switchPacketBuffer[switchBufferStart].id != 0;
+    //LOG_WARN("LoRa Switch buffer: %u, %u. Start id was  %u/0x%x", switchBufferStart,  switchBufferEnd, switchPacketBuffer[switchBufferStart].id, switchPacketBuffer[switchBufferStart].id);
+    switchPacketBuffer[switchBufferEnd].config = lora_switch;
+    switchPacketBuffer[switchBufferEnd].from = p->from;
+    switchPacketBuffer[switchBufferEnd].id = p->id;
+
+    switchBufferEnd++;
+
+    // We always want to add at the end if the buffer isn't full.
+    // But if we are full, that means overwriting the start of the buffer.
+    if (full) {
+        switchBufferStart++;
+        LOG_DEBUG("LoRa Switch buffer was full. Buffer start is %u, First is %u/0x%x, end now %u", switchBufferStart, switchPacketBuffer[switchBufferStart].id, switchPacketBuffer[switchBufferStart].id, switchBufferEnd);
+    }
+
+    // wrap around if need be
+    if (switchBufferEnd >= LORA_SWITCH_BUFFER_SIZE)
+        switchBufferEnd = 0;
+    
+    if (switchBufferStart >= LORA_SWITCH_BUFFER_SIZE)
+        switchBufferStart = 0;
+
+    //LOG_DEBUG("LoRa Switch buffer at %u -> %u", switchBufferStart, switchBufferEnd);
+}
+
+/** Lookup whether this packet has alternative radio settings associated with it, and return a reference to them */
+meshtastic_LoRaConfigLite *RadioLibInterface::getLoRaSwitchForPacket(meshtastic_MeshPacket *p) {
+    //LOG_DEBUG("Get LoRaSwitchForPacket id %u", p->id);
+    int pos = findPacketInSwitchBuffer(p);
+    if (pos != -1) {
+        return switchPacketBuffer[pos].config;
+    } else {
+        return nullptr;
+    }
+}
+
+/** Clear any record we may have set for this packet via setLoRaSwitchForPacket() */
+void RadioLibInterface::clearLoRaSwitchForPacket(meshtastic_MeshPacket *p) {
+    //LOG_DEBUG("clear LoRaSwitchForPacket id %u", p->id);
+    int pos = findPacketInSwitchBuffer(p);
+
+    // set the id to zero so that we won't find it when calling findPacketInSwitchBuffer()
+    if (pos != -1) {
+        switchPacketBuffer[pos].id = 0;
+    }
+
+    // if this is the last item, bring back the end index for the buffer
+    if (pos == switchBufferEnd - 1) {
+        switchBufferEnd = pos == 0 ? LORA_SWITCH_BUFFER_SIZE - 1 : pos;
+    }
+
+    // trim & bump the start of the buffer until we it's empty or there are no empty items at the start
+    while (switchPacketBuffer[switchBufferStart].id == 0 && 
+           switchBufferStart != switchBufferEnd //&& 
+           //(switchBufferStart != 0 || switchBufferEnd != LORA_SWITCH_BUFFER_SIZE)
+           ) {
+        switchBufferStart++;
+
+        // wrap around the start value if we reach the end of the buffer
+        if (switchBufferStart >= LORA_SWITCH_BUFFER_SIZE) {
+            switchBufferStart = 0;
+        }
+    }
+}
+
 void RadioLibInterface::handleTransmitInterrupt()
 {
     // This can be null if we forced the device to enter standby mode.  In that case
@@ -369,6 +506,17 @@ void RadioLibInterface::handleTransmitInterrupt()
     if (sendingPacket)
         completeSending();
     powerMon->clearState(meshtastic_PowerMon_State_Lora_TXOn); // But our transmitter is definitely off now
+
+    // Finished LoRa switch send, resetting radio to normal config if need be
+    if (switchInProgress) {
+        switchInProgress = nullptr;
+        switchingPacketId = 0;
+
+        if (getModemPreset() != config.lora.modem_preset || getChannelNum() != config.lora.channel_num) {
+            init();
+            reconfigure();
+        }
+    }
 }
 
 void RadioLibInterface::completeSending()
@@ -472,7 +620,7 @@ void RadioLibInterface::handleReceiveInterrupt()
             mp->encrypted.size = payloadLen;
 
             printPacket("Lora RX", mp);
-
+        
             airTime->logAirtime(RX_LOG, xmitMsec);
 
             deliverToReceiver(mp);

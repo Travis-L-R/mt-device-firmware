@@ -22,7 +22,7 @@ template <class T> class SX128xInterface : public RadioLibInterface
     /// Apply any radio provisioning changes
     /// Make sure the Driver is properly configured before calling init().
     /// \return true if initialisation succeeded.
-    virtual bool reconfigure() override;
+    virtual bool reconfigure(meshtastic_LoRaConfigLite *lcl = nullptr) override;
 
     /// Prepare hardware for sleep.  Call this _only_ for deep sleep, not needed for light sleep.
     virtual bool sleep() override;

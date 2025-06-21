@@ -19,6 +19,18 @@
 // In addition to the default Rx flags, we need the PREAMBLE_DETECTED flag to detect whether we are actively receiving
 #define MESHTASTIC_RADIOLIB_IRQ_RX_FLAGS (RADIOLIB_IRQ_RX_DEFAULT_FLAGS | (1 << RADIOLIB_IRQ_PREAMBLE_DETECTED))
 
+// We will only remember that we need to switch modem settings for this number of upcoming packets (shouldn't need many)
+#define LORA_SWITCH_BUFFER_SIZE 8
+
+#define CHANNEL_NUM_UNSET 65535
+
+typedef struct SwitchBufferItem {
+  NodeNum from; 
+  PacketId id;
+  meshtastic_LoRaConfigLite *config;
+} SwitchBufferItem;
+
+
 /**
  * We need to override the RadioLib ArduinoHal class to add mutex protection for SPI bus access
  */
@@ -86,6 +98,15 @@ class RadioLibInterface : public RadioInterface, protected concurrency::Notified
     /// are _trying_ to receive a packet currently (note - we might just be waiting for one)
     bool isReceiving = false;
 
+    // used for implementation of setLoRaSwitchForPacket() etc.
+    SwitchBufferItem switchPacketBuffer[LORA_SWITCH_BUFFER_SIZE] = {0};
+    uint switchBufferStart = 0;
+    uint switchBufferEnd = 0;
+
+    // tracks whether we are in the middle of a LoRa radio settings switch
+    meshtastic_LoRaConfigLite *switchInProgress = nullptr;
+    PacketId switchingPacketId = 0;
+
   public:
     /** Our ISR code currently needs this to find our active instance
      */
@@ -145,6 +166,18 @@ class RadioLibInterface : public RadioInterface, protected concurrency::Notified
 
     /** Attempt to find a packet in the TxQueue. Returns true if the packet was found. */
     virtual bool findInTxQueue(NodeNum from, PacketId id) override;
+
+    /** Record that we want to switch radio settings when sending this packet */
+    virtual void setLoRaSwitchForPacket(meshtastic_MeshPacket *p, meshtastic_LoRaConfigLite *lora_switch) override;
+
+    /** Lookup whether this packet has alternative radio settings associated with it, and return a reference to them */
+    virtual meshtastic_LoRaConfigLite *getLoRaSwitchForPacket(meshtastic_MeshPacket *p) override;
+
+    /** Clear any record we may have set for this packet via setLoRaSwitchForPacket() */
+    virtual void clearLoRaSwitchForPacket(meshtastic_MeshPacket *p) override;
+
+    /** Returns the index of the packet in the SwitchBuffer (first instance only, -1 if not found) */
+    int findPacketInSwitchBuffer(meshtastic_MeshPacket *p);
 
   private:
     /** if we have something waiting to send, start a short (random) timer so we can come check for collision before actually

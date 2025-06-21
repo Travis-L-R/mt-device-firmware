@@ -166,7 +166,7 @@ class RadioInterface
     /// Apply any radio provisioning changes
     /// Make sure the Driver is properly configured before calling init().
     /// \return true if initialisation succeeded.
-    virtual bool reconfigure();
+    virtual bool reconfigure(meshtastic_LoRaConfigLite *lcl = nullptr);
 
     /** The delay to use for retransmitting dropped packets */
     uint32_t getRetransmissionMsec(const meshtastic_MeshPacket *p);
@@ -186,6 +186,15 @@ class RadioInterface
     /** If the packet is not already in the late rebroadcast window, move it there */
     virtual void clampToLateRebroadcastWindow(NodeNum from, PacketId id) { return; }
 
+    /** Record that we want to switch radio settings when sending this packet */
+    virtual void setLoRaSwitchForPacket(meshtastic_MeshPacket *p, meshtastic_LoRaConfigLite *lora_switch) { return; }
+
+    /** Lookup whether this packet has alternative radio settings associated with it, and return a reference to them */
+    virtual meshtastic_LoRaConfigLite *getLoRaSwitchForPacket(meshtastic_MeshPacket *p) { return nullptr; }
+
+    /** Clear any record we may have set for this packet via setLoRaSwitchForPacket() */
+    virtual void clearLoRaSwitchForPacket(meshtastic_MeshPacket *p) { return; }
+
     /**
      * Calculate airtime per
      * https://www.rs-online.com/designspark/rel-assets/ds-assets/uploads/knowledge-items/application-notes-for-the-internet-of-things/LoRa%20Design%20Guide.pdf
@@ -200,6 +209,11 @@ class RadioInterface
      * Get the channel we saved.
      */
     uint32_t getChannelNum();
+
+    /**
+     * Get the modem preset we saved.
+     */
+    meshtastic_LoRaConfig_ModemPreset getModemPreset();
 
     /**
      * Get the frequency we saved.
@@ -217,6 +231,7 @@ class RadioInterface
 
     float savedFreq;
     uint32_t savedChannelNum;
+    meshtastic_LoRaConfig_ModemPreset savedModemPreset;
 
     /***
      * given a packet set sendingPacket and decode the protobufs into radiobuf.  Returns # of bytes to send (including the
@@ -241,6 +256,11 @@ class RadioInterface
      * Save the channel we selected for later reuse.
      */
     virtual void saveChannelNum(uint32_t savedChannelNum);
+
+    /**
+     * Save the modem preset we selected for later reuse.
+     */
+    virtual void saveModemPreset(meshtastic_LoRaConfig_ModemPreset savedPreset);
 
   private:
     /**

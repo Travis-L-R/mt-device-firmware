@@ -201,9 +201,9 @@ void INTERRUPT_ATTR RF95Interface::disableInterrupt()
     lora->clearDio0Action();
 }
 
-bool RF95Interface::reconfigure()
+bool RF95Interface::reconfigure(meshtastic_LoRaConfigLite *lcl)
 {
-    RadioLibInterface::reconfigure();
+    RadioLibInterface::reconfigure(lcl);
 
     // set mode to standby
     setStandby();
