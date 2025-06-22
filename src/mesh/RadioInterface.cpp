@@ -456,7 +456,7 @@ meshtastic_LoRaConfig_ModemPreset RadioInterface::getModemPreset()
  */
 void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
 {
-    LOG_ERROR("applyModemconfig %u/%u", c->modem_preset, c->channel_num);
+
     // Set up default configuration
     // No Sync Words in LORA mode
     meshtastic_LoRaConfig &loraConfig = config.lora;
@@ -465,6 +465,7 @@ void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
     // determine whether we are using the configured preset/channel or any supplied ones
     uint32_t channel_num = c ? c->channel_num : loraConfig.channel_num;
     meshtastic_LoRaConfig_ModemPreset preset = c ? c->modem_preset : loraConfig.modem_preset;
+    LOG_DEBUG("applyModemconfig %u/%u", preset, channel_num);
 
     while (!validConfig) {
         if (loraConfig.use_preset) {
