@@ -69,9 +69,9 @@ class Default
             else if (config.lora.use_preset && config.lora.modem_preset == meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST)
                 throttlingFactor = 0.02;
             else if (config.lora.use_preset &&
-                     IS_ONE_OF(config.lora.modem_preset, meshtastic_Config_LoRaConfig_ModemPreset_SHORT_FAST,
-                               meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO,
-                               meshtastic_Config_LoRaConfig_ModemPreset_SHORT_SLOW))
+                     IS_ONE_OF(config.lora.modem_preset, meshtastic_LoRaConfig_ModemPreset_SHORT_FAST,
+                               meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO,
+                               meshtastic_LoRaConfig_ModemPreset_SHORT_SLOW))
                 throttlingFactor = 0.01;
 
 #if USERPREFS_EVENT_MODE
