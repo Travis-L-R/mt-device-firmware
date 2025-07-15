@@ -8,7 +8,8 @@
 #include "Throttle.h"
 
 #define PACKETHISTORY_MAX                                                                                                        \
-    max((int)(MAX_NUM_NODES * 2.0), 100) // x2..3  Should suffice. Empirical setup. 16B per record malloc'ed, but no less than 100
+    max((u_int32_t)(MAX_NUM_NODES * 2.0),                                                                                        \
+        (u_int32_t)100) // x2..3  Should suffice. Empirical setup. 16B per record malloc'ed, but no less than 100
 
 #define RECENT_WARN_AGE (10 * 60 * 1000L) // Warn if the packet that gets removed was more recent than 10 min
 
@@ -245,8 +246,10 @@ void PacketHistory::insert(PacketRecord &r)
 #if RECENT_WARN_AGE > 0
     if (tu->rxTimeMsec && (OldtrxTimeMsec < RECENT_WARN_AGE)) {
         if (!(tu->id == r.id && tu->sender == r.sender)) {
+#if VERBOSE_PACKET_HISTORY
             LOG_WARN("Packet History - insert: Reusing slot aged %ds < %ds RECENT_WARN_AGE", OldtrxTimeMsec / 1000,
                      RECENT_WARN_AGE / 1000);
+#endif
         } else {
             // debug only
 #if VERBOSE_PACKET_HISTORY
@@ -274,7 +277,9 @@ void PacketHistory::insert(PacketRecord &r)
 #endif
 
     if (r.rxTimeMsec == 0) {
+#if VERBOSE_PACKET_HISTORY
         LOG_WARN("Packet History - insert: I will not store packet with rxTimeMsec = 0.");
+#endif
         return; // Return early if we can't update the history
     }
 
