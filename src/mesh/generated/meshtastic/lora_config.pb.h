@@ -60,7 +60,11 @@ typedef enum _meshtastic_LoRaConfig_RegionCode {
     /* Kazakhstan 433MHz */
     meshtastic_LoRaConfig_RegionCode_KZ_433 = 23,
     /* Kazakhstan 863MHz */
-    meshtastic_LoRaConfig_RegionCode_KZ_863 = 24
+    meshtastic_LoRaConfig_RegionCode_KZ_863 = 24,
+    /* Nepal 865MHz */
+    meshtastic_LoRaConfig_RegionCode_NP_865 = 25,
+    /* Brazil 902MHz */
+    meshtastic_LoRaConfig_RegionCode_BR_902 = 26
 } meshtastic_LoRaConfig_RegionCode;
 
 /* Standard predefined channel settings
@@ -182,8 +186,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _meshtastic_LoRaConfig_RegionCode_MIN meshtastic_LoRaConfig_RegionCode_UNSET
-#define _meshtastic_LoRaConfig_RegionCode_MAX meshtastic_LoRaConfig_RegionCode_KZ_863
-#define _meshtastic_LoRaConfig_RegionCode_ARRAYSIZE ((meshtastic_LoRaConfig_RegionCode)(meshtastic_LoRaConfig_RegionCode_KZ_863+1))
+#define _meshtastic_LoRaConfig_RegionCode_MAX meshtastic_LoRaConfig_RegionCode_BR_902
+#define _meshtastic_LoRaConfig_RegionCode_ARRAYSIZE ((meshtastic_LoRaConfig_RegionCode)(meshtastic_LoRaConfig_RegionCode_BR_902+1))
 
 #define _meshtastic_LoRaConfig_ModemPreset_MIN meshtastic_LoRaConfig_ModemPreset_LONG_FAST
 #define _meshtastic_LoRaConfig_ModemPreset_MAX meshtastic_LoRaConfig_ModemPreset_NO_PRESET
