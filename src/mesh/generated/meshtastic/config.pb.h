@@ -66,7 +66,10 @@ typedef enum _meshtastic_Config_DeviceConfig_Role {
     in areas not already covered by other routers, or to bridge around problematic terrain,
     but should not be given priority over other routers in order to avoid unnecessaraily
     consuming hops. */
-    meshtastic_Config_DeviceConfig_Role_ROUTER_LATE = 11
+    meshtastic_Config_DeviceConfig_Role_ROUTER_LATE = 11,
+    /* Description: Device that will wait until other nodes should have rebroadcast, and only rebroadcast if no one else has and channel utilization is low)
+ Technical Details: Intended for use when a node wouldn't normally be able to contribute helpfully to the mesh, but you still want it to be able to. */
+    meshtastic_Config_DeviceConfig_Role_CLIENT_LATE = 12
 } meshtastic_Config_DeviceConfig_Role;
 
 /* Defines the device's behavior for how messages are rebroadcast */
@@ -403,7 +406,8 @@ typedef struct _meshtastic_Config_DisplayConfig {
     /* Number of seconds the screen stays on after pressing the user button or receiving a message
  0 for default of one minute MAXUINT for always on */
     uint32_t screen_on_secs;
-    /* How the GPS coordinates are formatted on the OLED screen. */
+    /* Deprecated in 2.7.4: Unused
+ How the GPS coordinates are formatted on the OLED screen. */
     meshtastic_Config_DisplayConfig_GpsCoordinateFormat gps_format;
     /* Automatically toggles to the next page on the screen like a carousel, based the specified interval in seconds.
  Potentially useful for devices without user buttons. */
@@ -493,8 +497,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _meshtastic_Config_DeviceConfig_Role_MIN meshtastic_Config_DeviceConfig_Role_CLIENT
-#define _meshtastic_Config_DeviceConfig_Role_MAX meshtastic_Config_DeviceConfig_Role_ROUTER_LATE
-#define _meshtastic_Config_DeviceConfig_Role_ARRAYSIZE ((meshtastic_Config_DeviceConfig_Role)(meshtastic_Config_DeviceConfig_Role_ROUTER_LATE+1))
+#define _meshtastic_Config_DeviceConfig_Role_MAX meshtastic_Config_DeviceConfig_Role_CLIENT_LATE
+#define _meshtastic_Config_DeviceConfig_Role_ARRAYSIZE ((meshtastic_Config_DeviceConfig_Role)(meshtastic_Config_DeviceConfig_Role_CLIENT_LATE+1))
 
 #define _meshtastic_Config_DeviceConfig_RebroadcastMode_MIN meshtastic_Config_DeviceConfig_RebroadcastMode_ALL
 #define _meshtastic_Config_DeviceConfig_RebroadcastMode_MAX meshtastic_Config_DeviceConfig_RebroadcastMode_CORE_PORTNUMS_ONLY
