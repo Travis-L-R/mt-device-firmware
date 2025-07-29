@@ -300,7 +300,11 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     // the lora we need to make sure we have replaced it with our local address
     p->from = getFrom(p);
 
-    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // set the relayer to us
+    if (config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
+        p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // set the relayer to us (unless using client_late)
+    } else {
+        p->relay_node = NO_RELAY_NODE;
+    }
 
     // check whether we have a destination configured for our "to" address
     meshtastic_DestinationsConfig_MeshDestination *dest = nullptr;

@@ -13,7 +13,9 @@ FloodingRouter::FloodingRouter() {}
 ErrorCode FloodingRouter::send(meshtastic_MeshPacket *p)
 {
     // Add any messages _we_ send to the seen message list (so we will ignore all retransmissions we see)
-    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us
+    if (config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
+        p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us (unless using client_late)
+    }
     wasSeenRecently(p);                                         // FIXME, move this to a sniffSent method
 
     return Router::send(p);

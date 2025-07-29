@@ -14,11 +14,14 @@ PendingPacket::PendingPacket(meshtastic_MeshPacket *p, uint8_t numRetransmission
 ErrorCode NextHopRouter::send(meshtastic_MeshPacket *p)
 {
     // Add any messages _we_ send to the seen message list (so we will ignore all retransmissions we see)
-    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us
+    if (config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
+        p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us (unless using client_late)
+    }
     wasSeenRecently(p);                                         // FIXME, move this to a sniffSent method
 
     p->next_hop = getNextHop(p->to, p->relay_node); // set the next hop
     LOG_DEBUG("Setting next hop for packet with dest %x to %x", p->to, p->next_hop);
+
 
     // If it's from us, ReliableRouter already handles retransmissions if want_ack is set. If a next hop is set and hop limit is
     // not 0 or want_ack is set, start retransmissions
