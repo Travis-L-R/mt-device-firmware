@@ -71,7 +71,7 @@ void FloodingRouter::perhapsCancelDupe(const meshtastic_MeshPacket *p)
         if (do_cancel && Router::cancelSending(p->from, p->id))
             txRelayCanceled++;
     }
-    if (config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE && iface) {
+    if ((config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE || config.device.role == meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) && iface) {
         iface->clampToLateRebroadcastWindow(getFrom(p), p->id);
     }
 }
