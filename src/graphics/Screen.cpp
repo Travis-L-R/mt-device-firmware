@@ -1440,7 +1440,7 @@ bool shouldWakeOnReceivedMessage()
     if (moduleConfig.external_notification.enabled) {
         return false;
     }
-    if (!meshtastic_Config_DeviceConfig_Role_CLIENT && !meshtastic_Config_DeviceConfig_Role_CLIENT_MUTE) {
+    if (!meshtastic_Config_DeviceConfig_Role_CLIENT && !meshtastic_Config_DeviceConfig_Role_CLIENT_MUTE && !meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
         return false;
     }
     if (powerStatus && powerStatus->getBatteryChargePercent() < 10) {

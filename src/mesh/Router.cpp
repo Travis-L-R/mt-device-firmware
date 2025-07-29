@@ -288,6 +288,13 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
         }
     }
 
+    // when using client_late, abort sending if it's not from us and utilization is high enough
+    if (config.device.role == meshtastic_Config_DeviceConfig_Role_CLIENT_LATE && !isFromUs(p) &&
+        !(airTime->isTxAllowedChannelUtil(true) && airTime->isTxAllowedAirUtil())) {
+        packetPool.release(p);
+        return meshtastic_Routing_Error_NONE; // PR-TODO: see if this error is actually suitable or not
+    }
+
     // PacketId nakId = p->decoded.which_ackVariant == SubPacket_fail_id_tag ? p->decoded.ackVariant.fail_id : 0;
     // assert(!nakId); // I don't think we ever send 0hop naks over the wire (other than to the phone), test that assumption with
     // assert
