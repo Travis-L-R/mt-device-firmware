@@ -49,8 +49,10 @@ void FloodingRouter::perhapsCancelDupe(const meshtastic_MeshPacket *p)
 {
     if (config.device.role != meshtastic_Config_DeviceConfig_Role_ROUTER &&
         config.device.role != meshtastic_Config_DeviceConfig_Role_REPEATER &&
-        config.device.role != meshtastic_Config_DeviceConfig_Role_ROUTER_LATE) {
+        config.device.role != meshtastic_Config_DeviceConfig_Role_ROUTER_LATE &&
+        p->transport_mechanism == meshtastic_MeshPacket_TransportMechanism_TRANSPORT_LORA) {
         // cancel rebroadcast of this message *if* there was already one, unless we're a router/repeater!
+        // But only LoRa packets should be able to trigger this.
         bool do_cancel = true;
 
         // ...unless we're using leaps and might want to be a leap node...

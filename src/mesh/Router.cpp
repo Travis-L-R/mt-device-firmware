@@ -109,6 +109,7 @@ int32_t Router::runOnce()
 {
     meshtastic_MeshPacket *mp;
     while ((mp = fromRadioQueue.dequeuePtr(0)) != NULL) {
+        mp->transport_mechanism = meshtastic_MeshPacket_TransportMechanism_TRANSPORT_LORA;
         // printPacket("handle fromRadioQ", mp);
         perhapsHandleReceived(mp);
     }
@@ -267,9 +268,10 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     if (!config.lora.override_duty_cycle && myRegion->dutyCycle < 100) {
         float hourlyTxPercent = airTime->utilizationTXPercent();
         if (hourlyTxPercent > myRegion->dutyCycle) {
-#ifdef DEBUG_PORT
             uint8_t silentMinutes = airTime->getSilentMinutes(hourlyTxPercent, myRegion->dutyCycle);
+
             LOG_WARN("Duty cycle limit exceeded. Aborting send for now, you can send again in %d mins", silentMinutes);
+
             meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
             cn->has_reply_id = true;
             cn->reply_id = p->id;
@@ -277,7 +279,7 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
             cn->time = getValidTime(RTCQualityFromNet);
             sprintf(cn->message, "Duty cycle limit exceeded. You can send again in %d mins", silentMinutes);
             service->sendClientNotification(cn);
-#endif
+
             meshtastic_Routing_Error err = meshtastic_Routing_Error_DUTY_CYCLE_LIMIT;
             if (isFromUs(p)) { // only send NAK to API, not to the mesh
                 abortSendAndNak(err, p);
@@ -886,20 +888,6 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
 
             p->channel = 0;
             p->pki_encrypted = true;
-
-            // warn the user about a low entropy key
-            if (nodeDB->keyIsLowEntropy) {
-                LOG_WARN(LOW_ENTROPY_WARNING);
-                if (!nodeDB->hasWarned) {
-                    meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
-                    cn->which_payload_variant = meshtastic_ClientNotification_low_entropy_key_tag;
-                    cn->level = meshtastic_LogRecord_Level_WARNING;
-                    cn->time = getValidTime(RTCQualityFromNet);
-                    sprintf(cn->message, LOW_ENTROPY_WARNING);
-                    service->sendClientNotification(cn);
-                    nodeDB->hasWarned = true;
-                }
-            }
         } else {
             if (p->pki_encrypted == true) {
                 // Client specifically requested PKI encryption
@@ -996,11 +984,12 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         shouldIgnoreNonstandardPorts = true;
 #endif
         if (shouldIgnoreNonstandardPorts && p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
-            IS_ONE_OF(p->decoded.portnum, meshtastic_PortNum_ATAK_FORWARDER, meshtastic_PortNum_ATAK_PLUGIN,
-                      meshtastic_PortNum_PAXCOUNTER_APP, meshtastic_PortNum_IP_TUNNEL_APP, meshtastic_PortNum_AUDIO_APP,
-                      meshtastic_PortNum_PRIVATE_APP, meshtastic_PortNum_DETECTION_SENSOR_APP, meshtastic_PortNum_RANGE_TEST_APP,
-                      meshtastic_PortNum_REMOTE_HARDWARE_APP)) {
-            LOG_DEBUG("Ignore packet on blacklisted portnum for CORE_PORTNUMS_ONLY");
+            !IS_ONE_OF(p->decoded.portnum, meshtastic_PortNum_TEXT_MESSAGE_APP, meshtastic_PortNum_TEXT_MESSAGE_COMPRESSED_APP,
+                       meshtastic_PortNum_POSITION_APP, meshtastic_PortNum_NODEINFO_APP, meshtastic_PortNum_ROUTING_APP,
+                       meshtastic_PortNum_TELEMETRY_APP, meshtastic_PortNum_ADMIN_APP, meshtastic_PortNum_ALERT_APP,
+                       meshtastic_PortNum_KEY_VERIFICATION_APP, meshtastic_PortNum_WAYPOINT_APP,
+                       meshtastic_PortNum_STORE_FORWARD_APP, meshtastic_PortNum_TRACEROUTE_APP)) {
+            LOG_DEBUG("Ignore packet on non-standard portnum for CORE_PORTNUMS_ONLY");
             cancelSending(p->from, p->id);
             skipHandle = true;
         }
@@ -1013,8 +1002,10 @@ if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.
     LOG_DEBUG("Received packet with leap data. FD is %x, FL %x, LL %x, Mask %x", p->decoded.leap_data.final_dest, p->decoded.leap_data.first_leap, p->decoded.leap_data.last_leap, p->decoded.leap_data.leap_mask);
 }
 
+    // call modules here
+    // If this could be a spoofed packet, don't let the modules see it.
 #if USERPREFS_UPLINK_REPEAT_PACKETS
-    if (!skipHandle) {
+    if (!skipHandle && p->from != nodeDB->getNodeNum()) {
         // don't have the other modules do anything if this should have been filtered
         // todo: check that this doesn't break things, like position blurring
         if (!shouldFilter) {
@@ -1022,7 +1013,7 @@ if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.
         }
 
 #else 
-    if (!skipHandle) {
+    if (!skipHandle && p->from != nodeDB->getNodeNum()) {
         MeshModule::callModules(*p, src);
 #endif
 
@@ -1043,7 +1034,10 @@ if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.
 #endif
             mqtt->onSend(*p_encrypted, *p, p->channel);
 #endif
-
+    } else if (p->from == nodeDB->getNodeNum() && !skipHandle) {
+        if (!shouldFilter) {
+            MeshModule::callModules(*p, src, ROUTING_MODULE);
+        }
     }
 
     packetPool.release(p_encrypted); // Release the encrypted packet
