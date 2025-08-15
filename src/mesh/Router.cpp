@@ -66,6 +66,7 @@ int32_t Router::runOnce()
 {
     meshtastic_MeshPacket *mp;
     while ((mp = fromRadioQueue.dequeuePtr(0)) != NULL) {
+        mp->transport_mechanism = meshtastic_MeshPacket_TransportMechanism_TRANSPORT_LORA;
         // printPacket("handle fromRadioQ", mp);
         perhapsHandleReceived(mp);
     }
@@ -658,16 +659,16 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
         printPacket("packet decoding failed or skipped (no PSK?)", p);
     }
 
+    // call modules here
+    // If this could be a spoofed packet, don't let the modules see it.
+    if (!skipHandle && p->from != nodeDB->getNodeNum()) {
 #if USERPREFS_UPLINK_REPEAT_PACKETS
-    if (!skipHandle) {
         // don't have the other modules do anything if this should have been filtered
         // todo: check that this doesn't break things, like position blurring
         if (!shouldFilter) {
             MeshModule::callModules(*p, src);
         }
-
 #else 
-    if (!skipHandle) {
         MeshModule::callModules(*p, src);
 #endif
 
@@ -688,7 +689,14 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 #endif
             mqtt->onSend(*p_encrypted, *p, p->channel);
 #endif
-
+    } else if (p->from == nodeDB->getNodeNum() && !skipHandle) {
+#if USERPREFS_UPLINK_REPEAT_PACKETS
+        if (!shouldFilter) {
+            MeshModule::callModules(*p, src, ROUTING_MODULE);
+        }
+#else 
+        MeshModule::callModules(*p, src, ROUTING_MODULE);
+#endif
     }
 
     packetPool.release(p_encrypted); // Release the encrypted packet
