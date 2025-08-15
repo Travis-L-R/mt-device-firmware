@@ -1035,9 +1035,13 @@ if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.
             mqtt->onSend(*p_encrypted, *p, p->channel);
 #endif
     } else if (p->from == nodeDB->getNodeNum() && !skipHandle) {
+#if USERPREFS_UPLINK_REPEAT_PACKETS
         if (!shouldFilter) {
             MeshModule::callModules(*p, src, ROUTING_MODULE);
         }
+#else
+        MeshModule::callModules(*p, src, ROUTING_MODULE);
+#endif
     }
 
     packetPool.release(p_encrypted); // Release the encrypted packet
