@@ -63,7 +63,7 @@ NodeNum getFrom(const meshtastic_MeshPacket *p);
 bool isFromUs(const meshtastic_MeshPacket *p);
 
 // Returns true if the packet is destined to us
-bool isToUs(const meshtastic_MeshPacket *p);
+bool isToUs(const meshtastic_MeshPacket *p, bool leapAware=false);
 
 /* Some clients might not properly set priority, therefore we fix it here. */
 void fixPriority(meshtastic_MeshPacket *p);

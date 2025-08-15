@@ -86,7 +86,7 @@ bool FloodingRouter::isRebroadcaster()
 
 void FloodingRouter::perhapsRebroadcast(const meshtastic_MeshPacket *p)
 {
-    if (!isToUs(p) && (p->hop_limit > 0) && !isFromUs(p)) {
+    if (!isToUs(p, true) && (p->hop_limit > 0) && !isFromUs(p)) {
         if (p->id != 0) {
             if (isRebroadcaster()) {
                 meshtastic_MeshPacket *tosend = packetPool.allocCopy(*p); // keep a copy because we will be sending it

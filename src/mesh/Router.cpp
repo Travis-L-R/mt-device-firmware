@@ -257,7 +257,7 @@ ErrorCode Router::rawSend(meshtastic_MeshPacket *p)
  */
 ErrorCode Router::send(meshtastic_MeshPacket *p)
 {
-    if (isToUs(p)) {
+    if (isToUs(p, true)) {
         LOG_ERROR("BUG! send() called with packet destined for local node!");
         packetPool.release(p);
         return meshtastic_Routing_Error_BAD_REQUEST;
@@ -1007,6 +1007,11 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
     } else {
         printPacket("packet decoding failed or skipped (no PSK?)", p);
     }
+
+if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag && p->decoded.has_leap_data)
+{
+    LOG_DEBUG("Received packet with leap data. FD is %x, FL %x, LL %x, Mask %x", p->decoded.leap_data.final_dest, p->decoded.leap_data.first_leap, p->decoded.leap_data.last_leap, p->decoded.leap_data.leap_mask);
+}
 
 #if USERPREFS_UPLINK_REPEAT_PACKETS
     if (!skipHandle) {

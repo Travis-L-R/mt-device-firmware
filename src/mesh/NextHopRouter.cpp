@@ -85,7 +85,7 @@ void NextHopRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtast
                 }
             }
         }
-        if (!isToUs(p)) {
+        if (!isToUs(p, true)) {
             Router::cancelSending(p->to, p->decoded.request_id); // cancel rebroadcast for this DM
             // stop retransmission for the original packet
             stopRetransmission(p->to, p->decoded.request_id); // for original packet, from = to and id = request_id
@@ -101,7 +101,7 @@ void NextHopRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtast
 /* Check if we should be relaying this packet if so, do so. */
 bool NextHopRouter::perhapsRelay(const meshtastic_MeshPacket *p)
 {
-    if (!isToUs(p) && !isFromUs(p) && p->hop_limit > 0) {
+    if (!isToUs(p, true) && !isFromUs(p) && p->hop_limit > 0) {
         if (p->next_hop == NO_NEXT_HOP_PREFERENCE || p->next_hop == nodeDB->getLastByteOfNodeNum(getNodeNum())) {
             if (isRebroadcaster()) {
                 meshtastic_MeshPacket *tosend = packetPool.allocCopy(*p); // keep a copy because we will be sending it
