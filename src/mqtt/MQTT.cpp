@@ -779,7 +779,10 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
 
     RadioInterface *iface = router->getInterface();
     uint8_t frequencySlotNum = iface->getChannelNum();
-    std::string topic = cryptTopic + channelId + "/" + DisplayFormatters::getModemPresetDisplayName(iface->getModemPreset(), false) + "/" + std::to_string(frequencySlotNum == 0 ? frequencySlotNum : frequencySlotNum + 1) + "/" + owner.id;
+    std::string topic = cryptTopic + 
+        DisplayFormatters::getModemPresetDisplayName(iface->getModemPreset(), false) + "/" + 
+        std::to_string(frequencySlotNum == 0 ? frequencySlotNum : frequencySlotNum + 1) + "/" + 
+        channelId + "/" + owner.id;
 
     if (moduleConfig.mqtt.proxy_to_client_enabled || this->isConnectedDirectly()) {
         LOG_DEBUG("MQTT Publish %s, %u bytes", topic.c_str(), numBytes);
