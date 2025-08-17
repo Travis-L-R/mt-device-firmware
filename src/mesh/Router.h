@@ -35,6 +35,11 @@ class Router : protected concurrency::OSThread, protected PacketHistory
     void addInterface(RadioInterface *_iface) { iface = _iface; }
 
     /**
+     * Getter method for the interface currently in use
+     */
+    RadioInterface *getInterface() { return iface; }
+
+    /**
      * do idle processing
      * Mostly looking in our incoming rxPacket queue and calling handleReceived.
      */

@@ -5,6 +5,7 @@
 #include "ServiceEnvelope.h"
 #include "configuration.h"
 #include "main.h"
+#include "DisplayFormatters.h"
 #include "mesh/Channels.h"
 #include "mesh/Router.h"
 #include "mesh/generated/meshtastic/mqtt.pb.h"
@@ -775,7 +776,10 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     const meshtastic_ServiceEnvelope env = {
         .packet = const_cast<meshtastic_MeshPacket *>(p), .channel_id = const_cast<char *>(channelId), .gateway_id = owner.id};
     size_t numBytes = pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_ServiceEnvelope_msg, &env);
-    std::string topic = cryptTopic + channelId + "/" + owner.id;
+
+    RadioInterface *iface = router->getInterface();
+    uint8_t frequencySlotNum = iface->getChannelNum();
+    std::string topic = cryptTopic + channelId + "/" + DisplayFormatters::getModemPresetDisplayName(iface->getModemPreset(), false) + "/" + std::to_string(frequencySlotNum == 0 ? frequencySlotNum : frequencySlotNum + 1) + "/" + owner.id;
 
     if (moduleConfig.mqtt.proxy_to_client_enabled || this->isConnectedDirectly()) {
         LOG_DEBUG("MQTT Publish %s, %u bytes", topic.c_str(), numBytes);
