@@ -737,7 +737,7 @@ DecodeState perhapsDecode(meshtastic_MeshPacket *p)
 #if ENABLE_JSON_LOGGING
         LOG_TRACE("%s", MeshPacketSerializer::JsonSerialize(p, false).c_str());
 #elif ARCH_PORTDUINO
-        if (settingsStrings[traceFilename] != "" || settingsMap[logoutputlevel] == level_trace) {
+        if (portduino_config.traceFilename != "" || portduino_config.logoutputlevel == level_trace) {
             LOG_TRACE("%s", MeshPacketSerializer::JsonSerialize(p, false).c_str());
         }
 #endif
@@ -823,12 +823,15 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
         // is not in the local nodedb
         // First, only PKC encrypt packets we are originating
         if (isFromUs(p) &&
-            // Don't use PKC with simulator
-            radioType != SIM_RADIO &&
+#if ARCH_PORTDUINO
+            // Sim radio via the cli flag skips PKC
+            !portduino_config.force_simradio &&
+#endif
             // Don't use PKC with Ham mode
             !owner.is_licensed &&
-            // Don't use PKC if it's not explicitly requested and a non-primary channel is requested
-            !(p->pki_encrypted != true && p->channel > 0) &&
+            // Don't use PKC on 'serial' or 'gpio' channels unless explicitly requested
+            !(p->pki_encrypted != true && (strcasecmp(channels.getName(chIndex), Channels::serialChannel) == 0 ||
+                                           strcasecmp(channels.getName(chIndex), Channels::gpioChannel) == 0)) &&
             // Check for valid keys and single node destination
             config.security.private_key.size == 32 && !isBroadcast(p->to) && node != nullptr &&
             // Check for a known public key for the destination
@@ -918,7 +921,7 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
             // Now that we are encrypting the packet channel should be the hash (no longer the index)
             p->channel = hash;
             if (hash < 0) {
-                // No suitable channel could be found for sending
+                // No suitable channel could be found for
                 return meshtastic_Routing_Error_NO_CHANNEL;
             }
             crypto->encryptPacket(getFrom(p), p->id, numbytes, bytes);
@@ -934,7 +937,7 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
         // Now that we are encrypting the packet channel should be the hash (no longer the index)
         p->channel = hash;
         if (hash < 0) {
-            // No suitable channel could be found for sending
+            // No suitable channel could be found for
             return meshtastic_Routing_Error_NO_CHANNEL;
         }
         crypto->encryptPacket(getFrom(p), p->id, numbytes, bytes);
@@ -1057,10 +1060,10 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
     } else if (p->from == nodeDB->getNodeNum() && !skipHandle) {
 #if USERPREFS_UPLINK_REPEAT_PACKETS
         if (!shouldFilter) {
-            MeshModule::callModules(*p, src, ROUTING_MODULE);
+            MeshModule::callModules(*p, src);
         }
 #else
-        MeshModule::callModules(*p, src, ROUTING_MODULE);
+        MeshModule::callModules(*p, src);
 #endif
     }
 
@@ -1075,7 +1078,7 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
     LOG_TRACE("%s", MeshPacketSerializer::JsonSerializeEncrypted(p).c_str());
 #elif ARCH_PORTDUINO
     // Even ignored packets get logged in the trace
-    if (settingsStrings[traceFilename] != "" || settingsMap[logoutputlevel] == level_trace) {
+    if (portduino_config.traceFilename != "" || portduino_config.logoutputlevel == level_trace) {
         p->rx_time = getValidTime(RTCQualityFromNet); // store the arrival timestamp for the phone
         LOG_TRACE("%s", MeshPacketSerializer::JsonSerializeEncrypted(p).c_str());
     }
