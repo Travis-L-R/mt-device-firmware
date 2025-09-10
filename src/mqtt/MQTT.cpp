@@ -782,7 +782,7 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     RadioInterface *iface = router->getInterface();
     uint8_t frequencySlotNum = iface->getChannelNum();
     std::string topic = cryptTopic + 
-        DisplayFormatters::getModemPresetDisplayName(iface->getModemPreset(), false) + "/" + 
+        DisplayFormatters::getModemPresetDisplayName(iface->getModemPreset(), false, iface->getModemPreset() != meshtastic_LoRaConfig_ModemPreset_NO_PRESET) + "/" + 
         std::to_string(frequencySlotNum == 0 ? frequencySlotNum : frequencySlotNum + 1) + "/" + 
         channelId + "/" + owner.id;
 
