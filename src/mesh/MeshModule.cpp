@@ -99,7 +99,7 @@ void MeshModule::callModules(meshtastic_MeshPacket &mp, RxSource src)
 
     // Was this message directed to us specifically?  Will be false if we are sniffing someone elses packets
     auto ourNodeNum = nodeDB->getNodeNum();
-    bool toUs = isBroadcast(mp.to) || isToUs(&mp);
+    bool toUs = isBroadcast(mp.to) || isToUs(&mp, true);
     bool fromUs = mp.from == ourNodeNum;
 
     for (auto i = modules->begin(); i != modules->end(); ++i) {
@@ -155,7 +155,7 @@ void MeshModule::callModules(meshtastic_MeshPacket &mp, RxSource src)
                 // because currently when the phone sends things, it sends things using the local node ID as the from address.  A
                 // better solution (FIXME) would be to let phones have their own distinct addresses and we 'route' to them like
                 // any other node.
-                if (isDecoded && mp.decoded.want_response && toUs && (!isFromUs(&mp) || isToUs(&mp)) && !currentReply) {
+                if (isDecoded && mp.decoded.want_response && toUs && (!isFromUs(&mp) || isToUs(&mp, true)) && !currentReply) {
                     pi.sendResponse(mp);
                     ignoreRequest = ignoreRequest || pi.ignoreRequest; // If at least one module asks it, we may ignore a request
                     LOG_INFO("Asked module '%s' to send a response", pi.name);

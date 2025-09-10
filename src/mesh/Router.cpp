@@ -214,7 +214,7 @@ ErrorCode Router::sendLocal(meshtastic_MeshPacket *p, RxSource src)
         LOG_ERROR("Packet received with to: of 0!");
     }
     // No need to deliver externally if the destination is the local node
-    if (isToUs(p)) {
+    if (isToUs(p, true)) {
         printPacket("Enqueued local", p);
         enqueueReceivedMessage(p);
         return ERRNO_OK;
