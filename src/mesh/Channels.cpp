@@ -426,9 +426,9 @@ bool Channels::decryptForHash(ChannelIndex chIndex, ChannelHash channelHash)
 bool Channels::setDefaultPresetCryptoForHash(ChannelHash channelHash)
 {
     // Iterate all known presets
-    for (int preset = _meshtastic_Config_LoRaConfig_ModemPreset_MIN; preset <= _meshtastic_Config_LoRaConfig_ModemPreset_MAX;
+    for (int preset = _meshtastic_LoRaConfig_ModemPreset_MIN; preset <= _meshtastic_LoRaConfig_ModemPreset_MAX;
          ++preset) {
-        const char *name = DisplayFormatters::getModemPresetDisplayName((meshtastic_Config_LoRaConfig_ModemPreset)preset, false,
+        const char *name = DisplayFormatters::getModemPresetDisplayName((meshtastic_LoRaConfig_ModemPreset)preset, false,
                                                                         config.lora.use_preset);
         if (!name)
             continue;
