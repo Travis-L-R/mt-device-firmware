@@ -567,12 +567,7 @@ extern "C" {
 #define meshtastic_Config_PowerConfig_init_default {0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_Config_NetworkConfig_init_default {0, "", "", "", 0, _meshtastic_Config_NetworkConfig_AddressMode_MIN, false, meshtastic_Config_NetworkConfig_IpV4Config_init_default, "", 0, 0}
 #define meshtastic_Config_NetworkConfig_IpV4Config_init_default {0, 0, 0, 0}
-<<<<<<< HEAD
-#define meshtastic_Config_DisplayConfig_init_default {0, _meshtastic_Config_DisplayConfig_GpsCoordinateFormat_MIN, 0, 0, 0, _meshtastic_Config_DisplayConfig_DisplayUnits_MIN, _meshtastic_Config_DisplayConfig_OledType_MIN, _meshtastic_Config_DisplayConfig_DisplayMode_MIN, 0, 0, _meshtastic_Config_DisplayConfig_CompassOrientation_MIN, 0}
-=======
 #define meshtastic_Config_DisplayConfig_init_default {0, _meshtastic_Config_DisplayConfig_DeprecatedGpsCoordinateFormat_MIN, 0, 0, 0, _meshtastic_Config_DisplayConfig_DisplayUnits_MIN, _meshtastic_Config_DisplayConfig_OledType_MIN, _meshtastic_Config_DisplayConfig_DisplayMode_MIN, 0, 0, _meshtastic_Config_DisplayConfig_CompassOrientation_MIN, 0, 0}
-#define meshtastic_Config_LoRaConfig_init_default {0, _meshtastic_Config_LoRaConfig_ModemPreset_MIN, 0, 0, 0, 0, _meshtastic_Config_LoRaConfig_RegionCode_MIN, 0, 0, 0, 0, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0}
->>>>>>> cea9e1238bf48b766e38984f2aa326e2ce821073
 #define meshtastic_Config_BluetoothConfig_init_default {0, _meshtastic_Config_BluetoothConfig_PairingMode_MIN, 0}
 #define meshtastic_Config_SecurityConfig_init_default {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0}
 #define meshtastic_Config_SessionkeyConfig_init_default {0}
@@ -582,12 +577,7 @@ extern "C" {
 #define meshtastic_Config_PowerConfig_init_zero  {0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_Config_NetworkConfig_init_zero {0, "", "", "", 0, _meshtastic_Config_NetworkConfig_AddressMode_MIN, false, meshtastic_Config_NetworkConfig_IpV4Config_init_zero, "", 0, 0}
 #define meshtastic_Config_NetworkConfig_IpV4Config_init_zero {0, 0, 0, 0}
-<<<<<<< HEAD
-#define meshtastic_Config_DisplayConfig_init_zero {0, _meshtastic_Config_DisplayConfig_GpsCoordinateFormat_MIN, 0, 0, 0, _meshtastic_Config_DisplayConfig_DisplayUnits_MIN, _meshtastic_Config_DisplayConfig_OledType_MIN, _meshtastic_Config_DisplayConfig_DisplayMode_MIN, 0, 0, _meshtastic_Config_DisplayConfig_CompassOrientation_MIN, 0}
-=======
 #define meshtastic_Config_DisplayConfig_init_zero {0, _meshtastic_Config_DisplayConfig_DeprecatedGpsCoordinateFormat_MIN, 0, 0, 0, _meshtastic_Config_DisplayConfig_DisplayUnits_MIN, _meshtastic_Config_DisplayConfig_OledType_MIN, _meshtastic_Config_DisplayConfig_DisplayMode_MIN, 0, 0, _meshtastic_Config_DisplayConfig_CompassOrientation_MIN, 0, 0}
-#define meshtastic_Config_LoRaConfig_init_zero   {0, _meshtastic_Config_LoRaConfig_ModemPreset_MIN, 0, 0, 0, 0, _meshtastic_Config_LoRaConfig_RegionCode_MIN, 0, 0, 0, 0, 0, 0, 0, 0, 0, {0, 0, 0}, 0, 0}
->>>>>>> cea9e1238bf48b766e38984f2aa326e2ce821073
 #define meshtastic_Config_BluetoothConfig_init_zero {0, _meshtastic_Config_BluetoothConfig_PairingMode_MIN, 0}
 #define meshtastic_Config_SecurityConfig_init_zero {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0}
 #define meshtastic_Config_SessionkeyConfig_init_zero {0}
@@ -653,28 +643,7 @@ extern "C" {
 #define meshtastic_Config_DisplayConfig_wake_on_tap_or_motion_tag 10
 #define meshtastic_Config_DisplayConfig_compass_orientation_tag 11
 #define meshtastic_Config_DisplayConfig_use_12h_clock_tag 12
-<<<<<<< HEAD
-=======
 #define meshtastic_Config_DisplayConfig_use_long_node_name_tag 13
-#define meshtastic_Config_LoRaConfig_use_preset_tag 1
-#define meshtastic_Config_LoRaConfig_modem_preset_tag 2
-#define meshtastic_Config_LoRaConfig_bandwidth_tag 3
-#define meshtastic_Config_LoRaConfig_spread_factor_tag 4
-#define meshtastic_Config_LoRaConfig_coding_rate_tag 5
-#define meshtastic_Config_LoRaConfig_frequency_offset_tag 6
-#define meshtastic_Config_LoRaConfig_region_tag  7
-#define meshtastic_Config_LoRaConfig_hop_limit_tag 8
-#define meshtastic_Config_LoRaConfig_tx_enabled_tag 9
-#define meshtastic_Config_LoRaConfig_tx_power_tag 10
-#define meshtastic_Config_LoRaConfig_channel_num_tag 11
-#define meshtastic_Config_LoRaConfig_override_duty_cycle_tag 12
-#define meshtastic_Config_LoRaConfig_sx126x_rx_boosted_gain_tag 13
-#define meshtastic_Config_LoRaConfig_override_frequency_tag 14
-#define meshtastic_Config_LoRaConfig_pa_fan_disabled_tag 15
-#define meshtastic_Config_LoRaConfig_ignore_incoming_tag 103
-#define meshtastic_Config_LoRaConfig_ignore_mqtt_tag 104
-#define meshtastic_Config_LoRaConfig_config_ok_to_mqtt_tag 105
->>>>>>> cea9e1238bf48b766e38984f2aa326e2ce821073
 #define meshtastic_Config_BluetoothConfig_enabled_tag 1
 #define meshtastic_Config_BluetoothConfig_mode_tag 2
 #define meshtastic_Config_BluetoothConfig_fixed_pin_tag 3
@@ -860,12 +829,7 @@ extern const pb_msgdesc_t meshtastic_Config_SessionkeyConfig_msg;
 #define MESHTASTIC_MESHTASTIC_CONFIG_PB_H_MAX_SIZE meshtastic_Config_size
 #define meshtastic_Config_BluetoothConfig_size   10
 #define meshtastic_Config_DeviceConfig_size      100
-<<<<<<< HEAD
-#define meshtastic_Config_DisplayConfig_size     32
-=======
 #define meshtastic_Config_DisplayConfig_size     34
-#define meshtastic_Config_LoRaConfig_size        85
->>>>>>> cea9e1238bf48b766e38984f2aa326e2ce821073
 #define meshtastic_Config_NetworkConfig_IpV4Config_size 20
 #define meshtastic_Config_NetworkConfig_size     204
 #define meshtastic_Config_PositionConfig_size    62
