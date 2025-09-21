@@ -195,8 +195,13 @@ extern const pb_msgdesc_t meshtastic_LocalModuleConfig_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_LOCALONLY_PB_H_MAX_SIZE meshtastic_LocalConfig_size
+<<<<<<< HEAD
 #define meshtastic_LocalConfig_size              1066
 #define meshtastic_LocalModuleConfig_size        671
+=======
+#define meshtastic_LocalConfig_size              749
+#define meshtastic_LocalModuleConfig_size        673
+>>>>>>> cea9e1238bf48b766e38984f2aa326e2ce821073
 
 #ifdef __cplusplus
 } /* extern "C" */
