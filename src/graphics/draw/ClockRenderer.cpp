@@ -2,11 +2,13 @@
 #if HAS_SCREEN
 #include "ClockRenderer.h"
 #include "NodeDB.h"
+#include "UIRenderer.h"
 #include "configuration.h"
 #include "gps/GeoCoord.h"
 #include "gps/RTC.h"
 #include "graphics/ScreenFonts.h"
 #include "graphics/SharedUIDisplay.h"
+#include "graphics/draw/UIRenderer.h"
 #include "graphics/emotes.h"
 #include "graphics/images.h"
 #include "main.h"

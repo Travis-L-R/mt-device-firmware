@@ -204,7 +204,7 @@ NodeDB::NodeDB()
 
     int saveWhat = 0;
     // Get device unique id
-#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
+#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C6)
     uint32_t unique_id[4];
     // ESP32 factory burns a unique id in efuse for S2+ series and evidently C3+ series
     // This is used for HMACs in the esp-rainmaker AIOT platform and seems to be a good choice for us
@@ -256,6 +256,8 @@ NodeDB::NodeDB()
     owner.role = config.device.role;
     // Ensure macaddr is set to our macaddr as it will be copied in our info below
     memcpy(owner.macaddr, ourMacAddr, sizeof(owner.macaddr));
+    // Ensure owner.id is always derived from the node number
+    snprintf(owner.id, sizeof(owner.id), "!%08x", getNodeNum());
 
     if (!config.has_security) {
         config.has_security = true;
@@ -562,10 +564,9 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
 #endif
 
 #ifdef USERPREFS_CONFIG_DEVICE_ROLE
-    // Restrict ROUTER*, LOST AND FOUND, and REPEATER roles for security reasons
+    // Restrict ROUTER*, LOST AND FOUND roles for security reasons
     if (IS_ONE_OF(USERPREFS_CONFIG_DEVICE_ROLE, meshtastic_Config_DeviceConfig_Role_ROUTER,
-                  meshtastic_Config_DeviceConfig_Role_ROUTER_LATE, meshtastic_Config_DeviceConfig_Role_REPEATER,
-                  meshtastic_Config_DeviceConfig_Role_LOST_AND_FOUND)) {
+                  meshtastic_Config_DeviceConfig_Role_ROUTER_LATE, meshtastic_Config_DeviceConfig_Role_LOST_AND_FOUND)) {
         LOG_WARN("ROUTER roles are restricted, falling back to CLIENT role");
         config.device.role = meshtastic_Config_DeviceConfig_Role_CLIENT;
     } else {
@@ -709,7 +710,7 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
 #ifdef USERPREFS_NETWORK_ENABLED_PROTOCOLS
     config.network.enabled_protocols = USERPREFS_NETWORK_ENABLED_PROTOCOLS;
 #else
-    config.network.enabled_protocols = 1;
+    config.network.enabled_protocols = 0;
 #endif
 #endif
 
@@ -783,9 +784,7 @@ void NodeDB::installDefaultModuleConfig()
 
     moduleConfig.version = DEVICESTATE_CUR_VER;
     moduleConfig.has_mqtt = true;
-#if !MESHTASTIC_EXCLUDE_RANGETEST
     moduleConfig.has_range_test = true;
-#endif
     moduleConfig.has_serial = true;
     moduleConfig.has_store_forward = true;
     moduleConfig.has_telemetry = true;
@@ -851,12 +850,6 @@ void NodeDB::installDefaultModuleConfig()
     moduleConfig.canned_message.inputbroker_event_press = meshtastic_ModuleConfig_CannedMessageConfig_InputEventChar_SELECT;
 #endif
     moduleConfig.has_canned_message = true;
-#if !MESHTASTIC_EXCLUDE_AUDIO
-    moduleConfig.has_audio = true;
-#endif
-#if !MESHTASTIC_EXCLUDE_PAXCOUNTER
-    moduleConfig.has_paxcounter = true;
-#endif
 #if USERPREFS_MQTT_ENABLED && !MESHTASTIC_EXCLUDE_MQTT
     moduleConfig.mqtt.enabled = true;
 #endif
@@ -904,14 +897,12 @@ void NodeDB::installDefaultModuleConfig()
     moduleConfig.detection_sensor.detection_trigger_type = meshtastic_ModuleConfig_DetectionSensorConfig_TriggerType_LOGIC_HIGH;
     moduleConfig.detection_sensor.minimum_broadcast_secs = 45;
 
-#if !MESHTASTIC_EXCLUDE_AMBIENTLIGHTING
     moduleConfig.has_ambient_lighting = true;
     moduleConfig.ambient_lighting.current = 10;
     // Default to a color based on our node number
     moduleConfig.ambient_lighting.red = (myNodeInfo.my_node_num & 0xFF0000) >> 16;
     moduleConfig.ambient_lighting.green = (myNodeInfo.my_node_num & 0x00FF00) >> 8;
     moduleConfig.ambient_lighting.blue = myNodeInfo.my_node_num & 0x0000FF;
-#endif
 
     initModuleConfigIntervals();
 }
@@ -929,11 +920,6 @@ void NodeDB::installRoleDefaults(meshtastic_Config_DeviceConfig_Role role)
         moduleConfig.telemetry.device_update_interval = ONE_DAY;
         owner.has_is_unmessagable = true;
         owner.is_unmessagable = true;
-    } else if (role == meshtastic_Config_DeviceConfig_Role_REPEATER) {
-        owner.has_is_unmessagable = true;
-        owner.is_unmessagable = true;
-        config.display.screen_on_secs = 1;
-        config.device.rebroadcast_mode = meshtastic_Config_DeviceConfig_RebroadcastMode_CORE_PORTNUMS_ONLY;
     } else if (role == meshtastic_Config_DeviceConfig_Role_SENSOR) {
         owner.has_is_unmessagable = true;
         owner.is_unmessagable = true;
@@ -1178,6 +1164,20 @@ void NodeDB::loadFromDisk()
     spiLock->unlock();
 #endif
 #ifdef FSCom
+#ifdef FACTORY_INSTALL
+    spiLock->lock();
+    if (!FSCom.exists("/prefs/" xstr(BUILD_EPOCH))) {
+        LOG_WARN("Factory Install Reset!");
+        FSCom.format();
+        FSCom.mkdir("/prefs");
+        File f2 = FSCom.open("/prefs/" xstr(BUILD_EPOCH), FILE_O_WRITE);
+        if (f2) {
+            f2.flush();
+            f2.close();
+        }
+    }
+    spiLock->unlock();
+#endif
     spiLock->lock();
     if (FSCom.exists(legacyPrefFileName)) {
         spiLock->unlock();
@@ -1449,25 +1449,15 @@ bool NodeDB::saveToDiskNoRetry(int saveWhat)
         moduleConfig.has_canned_message = true;
         moduleConfig.has_external_notification = true;
         moduleConfig.has_mqtt = true;
-#if !MESHTASTIC_EXCLUDE_RANGETEST
         moduleConfig.has_range_test = true;
-#endif
         moduleConfig.has_serial = true;
-#if !MESHTASTIC_EXCLUDE_STOREFORWARD
         moduleConfig.has_store_forward = true;
-#endif
         moduleConfig.has_telemetry = true;
         moduleConfig.has_neighbor_info = true;
         moduleConfig.has_detection_sensor = true;
-#if !MESHTASTIC_EXCLUDE_AMBIENTLIGHTING
         moduleConfig.has_ambient_lighting = true;
-#endif
-#if !MESHTASTIC_EXCLUDE_AUDIO
         moduleConfig.has_audio = true;
-#endif
-#if !MESHTASTIC_EXCLUDE_PAXCOUNTER
         moduleConfig.has_paxcounter = true;
-#endif
 
         success &=
             saveProto(moduleConfigFileName, meshtastic_LocalModuleConfig_size, &meshtastic_LocalModuleConfig_msg, &moduleConfig);
@@ -1634,8 +1624,17 @@ void NodeDB::updateTelemetry(uint32_t nodeId, const meshtastic_Telemetry &t, RxS
 void NodeDB::addFromContact(meshtastic_SharedContact contact)
 {
     meshtastic_NodeInfoLite *info = getOrCreateMeshNode(contact.node_num);
-    if (!info) {
+    if (!info || !contact.has_user) {
         return;
+    }
+    // If the local node has this node marked as manually verified
+    // and the client does not, do not allow the client to update the
+    // saved public key.
+    if ((info->bitfield & NODEINFO_BITFIELD_IS_KEY_MANUALLY_VERIFIED_MASK) && !contact.manually_verified) {
+        if (contact.user.public_key.size != info->user.public_key.size ||
+            memcmp(contact.user.public_key.bytes, info->user.public_key.bytes, info->user.public_key.size) != 0) {
+            return;
+        }
     }
     info->num = contact.node_num;
     info->has_user = true;
@@ -1651,10 +1650,12 @@ void NodeDB::addFromContact(meshtastic_SharedContact contact)
     } else {
         info->last_heard = getValidTime(RTCQualityNTP);
         info->is_favorite = true;
-        info->bitfield |= NODEINFO_BITFIELD_IS_KEY_MANUALLY_VERIFIED_MASK;
+        // As the clients will begin sending the contact with DMs, we want to strictly check if the node is manually verified
+        if (contact.manually_verified) {
+            info->bitfield |= NODEINFO_BITFIELD_IS_KEY_MANUALLY_VERIFIED_MASK;
+        }
         // Mark the node's key as manually verified to indicate trustworthiness.
         updateGUIforNode = info;
-        // powerFSM.trigger(EVENT_NODEDB_UPDATED); This event has been retired
         sortMeshDB();
         notifyObservers(true); // Force an update whether or not our node counts have changed
     }
@@ -1698,13 +1699,13 @@ bool NodeDB::updateUser(uint32_t nodeId, meshtastic_User &p, uint8_t channelInde
             return false;
         }
         LOG_INFO("Public Key set for node, not updating!");
-        // we copy the key into the incoming packet, to prevent overwrite
-        p.public_key.size = 32;
-        memcpy(p.public_key.bytes, info->user.public_key.bytes, 32);
     } else if (p.public_key.size == 32) {
         LOG_INFO("Update Node Pubkey!");
     }
 #endif
+
+    // Always ensure user.id is derived from nodeId, regardless of what was received
+    snprintf(p.id, sizeof(p.id), "!%08x", nodeId);
 
     // Both of info->user and p start as filled with zero so I think this is okay
     auto lite = TypeConversions::ConvertToUserLite(p);
@@ -1882,6 +1883,13 @@ uint8_t NodeDB::getMeshNodeChannel(NodeNum n)
         return 0; // defaults to PRIMARY
     }
     return info->channel;
+}
+
+std::string NodeDB::getNodeId() const
+{
+    char nodeId[16];
+    snprintf(nodeId, sizeof(nodeId), "!%08x", myNodeInfo.my_node_num);
+    return std::string(nodeId);
 }
 
 /// Find a node in our DB, return null for missing
