@@ -35,6 +35,8 @@ class TraceRouteModule : public ProtobufModule<meshtastic_RouteDiscovery>,
     virtual bool wantUIFrame() override { return shouldDraw(); }
     virtual Observable<const UIFrameEvent *> *getUIFrameObservable() override { return this; }
 
+    void processUpgradedPacket(const meshtastic_MeshPacket &mp);
+
   protected:
     bool handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshtastic_RouteDiscovery *r) override;
 
@@ -52,6 +54,12 @@ class TraceRouteModule : public ProtobufModule<meshtastic_RouteDiscovery>,
 
     // Call to add your ID to the route array of a RouteDiscovery message
     void appendMyIDandSNR(meshtastic_RouteDiscovery *r, float snr, bool isTowardsDestination, bool SNRonly);
+
+    // Update next-hops in the routing table based on the returned route
+    void updateNextHops(meshtastic_MeshPacket &p, meshtastic_RouteDiscovery *r);
+
+    // Helper to update next-hop for a single node
+    void maybeSetNextHop(NodeNum target, uint8_t nextHopByte);
 
     /* Call to print the route array of a RouteDiscovery message.
        Set origin to where the request came from.

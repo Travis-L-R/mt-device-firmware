@@ -94,11 +94,13 @@ static void onNetworkConnected()
 // ESPmDNS (ESP32) and SimpleMDNS (RP2040) have slightly different APIs for adding TXT records
 #ifdef ARCH_ESP32
             MDNS.addServiceTxt("meshtastic", "tcp", "shortname", String(owner.short_name));
-            MDNS.addServiceTxt("meshtastic", "tcp", "id", String(owner.id));
+            MDNS.addServiceTxt("meshtastic", "tcp", "id", String(nodeDB->getNodeId().c_str()));
+            MDNS.addServiceTxt("meshtastic", "tcp", "pio_env", optstr(APP_ENV));
             // ESP32 prints obtained IP address in WiFiEvent
 #elif defined(ARCH_RP2040)
             MDNS.addServiceTxt("meshtastic", "shortname", owner.short_name);
-            MDNS.addServiceTxt("meshtastic", "id", owner.id);
+            MDNS.addServiceTxt("meshtastic", "id", nodeDB->getNodeId().c_str());
+            MDNS.addServiceTxt("meshtastic", "pio_env", optstr(APP_ENV));
             LOG_INFO("Obtained IP address: %s", WiFi.localIP().toString().c_str());
 #endif
         }
@@ -234,6 +236,11 @@ bool isWifiAvailable()
         return true;
 #ifdef USE_WS5500
     } else if (config.network.eth_enabled) {
+        return true;
+#endif
+#ifndef ARCH_PORTDUINO
+    } else if (WiFi.status() == WL_CONNECTED) {
+        // it's likely we have wifi now, but user intends to turn it off in config!
         return true;
 #endif
     } else {

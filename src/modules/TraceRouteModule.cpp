@@ -21,6 +21,11 @@ void TraceRouteModule::alterReceivedProtobuf(meshtastic_MeshPacket &p, meshtasti
 {
     const meshtastic_Data &incoming = p.decoded;
 
+    // Update next-hops using returned route
+    if (incoming.request_id) {
+        updateNextHops(p, r);
+    }
+
     // Insert unknown hops if necessary
     insertUnknownHops(p, r, !incoming.request_id);
 
@@ -153,6 +158,79 @@ void TraceRouteModule::alterReceivedProtobuf(meshtastic_MeshPacket &p, meshtasti
     }
 }
 
+void TraceRouteModule::updateNextHops(meshtastic_MeshPacket &p, meshtastic_RouteDiscovery *r)
+{
+    // E.g. if the route is A->B->C->D and we are B, we can set C as next-hop for C and D
+    // Similarly, if we are C, we can set D as next-hop for D
+    // If we are A, we can set B as next-hop for B, C and D
+
+    // First check if we were the original sender or in the original route
+    int8_t nextHopIndex = -1;
+    if (isToUs(&p)) {
+        nextHopIndex = 0; // We are the original sender, next hop is first in route
+    } else {
+        // Check if we are in the original route
+        for (uint8_t i = 0; i < r->route_count; i++) {
+            if (r->route[i] == nodeDB->getNodeNum()) {
+                nextHopIndex = i + 1; // Next hop is the one after us
+                break;
+            }
+        }
+    }
+
+    // If we are in the original route, update the next hops
+    if (nextHopIndex != -1) {
+        // For every node after us, we can set the next-hop to the first node after us
+        NodeNum nextHop;
+        if (nextHopIndex == r->route_count) {
+            nextHop = p.from; // We are the last in the route, next hop is destination
+        } else {
+            nextHop = r->route[nextHopIndex];
+        }
+
+        if (nextHop == NODENUM_BROADCAST) {
+            return;
+        }
+        uint8_t nextHopByte = nodeDB->getLastByteOfNodeNum(nextHop);
+
+        // For the rest of the nodes in the route, set their next-hop
+        // Note: if we are the last in the route, this loop will not run
+        for (int8_t i = nextHopIndex; i < r->route_count; i++) {
+            NodeNum targetNode = r->route[i];
+            maybeSetNextHop(targetNode, nextHopByte);
+        }
+
+        // Also set next-hop for the destination node
+        maybeSetNextHop(p.from, nextHopByte);
+    }
+}
+
+void TraceRouteModule::maybeSetNextHop(NodeNum target, uint8_t nextHopByte)
+{
+    if (target == NODENUM_BROADCAST)
+        return;
+
+    meshtastic_NodeInfoLite *node = nodeDB->getMeshNode(target);
+    if (node && node->next_hop != nextHopByte) {
+        LOG_INFO("Updating next-hop for 0x%08x to 0x%02x based on traceroute", target, nextHopByte);
+        node->next_hop = nextHopByte;
+    }
+}
+
+void TraceRouteModule::processUpgradedPacket(const meshtastic_MeshPacket &mp)
+{
+    if (mp.which_payload_variant != meshtastic_MeshPacket_decoded_tag || mp.decoded.portnum != meshtastic_PortNum_TRACEROUTE_APP)
+        return;
+
+    meshtastic_RouteDiscovery decoded = meshtastic_RouteDiscovery_init_zero;
+    if (!pb_decode_from_bytes(mp.decoded.payload.bytes, mp.decoded.payload.size, &meshtastic_RouteDiscovery_msg, &decoded))
+        return;
+
+    handleReceivedProtobuf(mp, &decoded);
+    // Intentionally modify the packet in-place so downstream relays see our updates.
+    alterReceivedProtobuf(const_cast<meshtastic_MeshPacket &>(mp), &decoded);
+}
+
 void TraceRouteModule::insertUnknownHops(meshtastic_MeshPacket &p, meshtastic_RouteDiscovery *r, bool isTowardsDestination)
 {
     pb_size_t *route_count;
@@ -232,7 +310,7 @@ void TraceRouteModule::appendMyIDandSNR(meshtastic_RouteDiscovery *updated, floa
 
 void TraceRouteModule::printRoute(meshtastic_RouteDiscovery *r, uint32_t origin, uint32_t dest, bool isTowardsDestination)
 {
-#ifdef DEBUG_PORT
+#if defined(DEBUG_PORT) && !defined(DEBUG_MUTE)
     std::string route = "Route traced:\n";
     route += vformat("0x%x --> ", origin);
     for (uint8_t i = 0; i < r->route_count; i++) {
@@ -405,6 +483,9 @@ bool TraceRouteModule::startTraceRoute(NodeNum node)
         p->decoded.portnum = meshtastic_PortNum_TRACEROUTE_APP;
         p->decoded.want_response = true;
 
+        // Use reliable delivery for traceroute requests (which will be copied to traceroute responses by setReplyTo)
+        p->want_ack = true;
+
         // Manually encode the RouteDiscovery payload
         p->decoded.payload.size =
             pb_encode_to_bytes(p->decoded.payload.bytes, sizeof(p->decoded.payload.bytes), &meshtastic_RouteDiscovery_msg, &req);
@@ -518,6 +599,9 @@ void TraceRouteModule::launch(NodeNum node)
         p->decoded.portnum = meshtastic_PortNum_TRACEROUTE_APP;
         p->decoded.want_response = true;
 
+        // Use reliable delivery for traceroute requests (which will be copied to traceroute responses by setReplyTo)
+        p->want_ack = true;
+
         p->decoded.payload.size =
             pb_encode_to_bytes(p->decoded.payload.bytes, sizeof(p->decoded.payload.bytes), &meshtastic_RouteDiscovery_msg, &req);
 
@@ -602,7 +686,7 @@ void TraceRouteModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiState *state
             int start = 0;
             int newlinePos = resultText.indexOf('\n', start);
 
-            while (newlinePos != -1 || start < resultText.length()) {
+            while (newlinePos != -1 || start < static_cast<int>(resultText.length())) {
                 String segment;
                 if (newlinePos != -1) {
                     segment = resultText.substring(start, newlinePos);
@@ -624,7 +708,7 @@ void TraceRouteModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiState *state
                         int lastGoodBreak = -1;
                         bool lineComplete = false;
 
-                        for (int i = 0; i < remaining.length(); i++) {
+                        for (int i = 0; i < static_cast<int>(remaining.length()); i++) {
                             char ch = remaining.charAt(i);
                             String testLine = tempLine + ch;
 

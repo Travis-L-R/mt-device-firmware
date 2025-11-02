@@ -24,7 +24,8 @@
 
 namespace graphics
 {
-extern void drawCommonHeader(OLEDDisplay *display, int16_t x, int16_t y, const char *titleStr, bool battery_only);
+extern void drawCommonHeader(OLEDDisplay *display, int16_t x, int16_t y, const char *titleStr, bool force_no_invert,
+                             bool show_date);
 }
 
 int32_t PowerTelemetryModule::runOnce()
@@ -107,6 +108,7 @@ bool PowerTelemetryModule::wantUIFrame()
     return moduleConfig.telemetry.power_screen_enabled;
 }
 
+#if HAS_SCREEN
 void PowerTelemetryModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
 {
     display->clear();
@@ -164,11 +166,12 @@ void PowerTelemetryModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiState *s
         drawLine("Ch3", m.ch3_voltage, m.ch3_current);
     }
 }
+#endif
 
 bool PowerTelemetryModule::handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshtastic_Telemetry *t)
 {
     if (t->which_variant == meshtastic_Telemetry_power_metrics_tag) {
-#ifdef DEBUG_PORT
+#if defined(DEBUG_PORT) && !defined(DEBUG_MUTE)
         const char *sender = getSenderShortName(mp);
 
         LOG_INFO("(Received from %s): ch1_voltage=%.1f, ch1_current=%.1f, ch2_voltage=%.1f, ch2_current=%.1f, "

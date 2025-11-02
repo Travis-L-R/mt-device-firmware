@@ -116,16 +116,21 @@ bool RadioLibInterface::receiveDetected(uint16_t irq, ulong syncWordHeaderValidF
     if (detected) {
         if (!activeReceiveStart) {
             activeReceiveStart = millis();
-        } else if (!Throttle::isWithinTimespanMs(activeReceiveStart, 2 * preambleTimeMsec) && !(irq & syncWordHeaderValidFlag)) {
-            // The HEADER_VALID flag should be set by now if it was really a packet, so ignore PREAMBLE_DETECTED flag
-            activeReceiveStart = 0;
-            LOG_DEBUG("Ignore false preamble detection");
-            return false;
-        } else if (!Throttle::isWithinTimespanMs(activeReceiveStart, maxPacketTimeMsec)) {
-            // We should have gotten an RX_DONE IRQ by now if it was really a packet, so ignore HEADER_VALID flag
-            activeReceiveStart = 0;
-            LOG_DEBUG("Ignore false header detection");
-            return false;
+        } else if (!Throttle::isWithinTimespanMs(activeReceiveStart, 2 * preambleTimeMsec)) {
+            if (!(irq & syncWordHeaderValidFlag)) {
+                // The HEADER_VALID flag should be set by now if it was really a packet, so ignore PREAMBLE_DETECTED flag
+                activeReceiveStart = 0;
+                LOG_DEBUG("Ignore false preamble detection");
+                return false;
+            } else {
+                uint32_t maxPacketTimeMsec = getPacketTime(meshtastic_Constants_DATA_PAYLOAD_LEN + sizeof(PacketHeader));
+                if (!Throttle::isWithinTimespanMs(activeReceiveStart, maxPacketTimeMsec)) {
+                    // We should have gotten an RX_DONE IRQ by now if it was really a packet, so ignore HEADER_VALID flag
+                    activeReceiveStart = 0;
+                    LOG_DEBUG("Ignore false header detection");
+                    return false;
+                }
+            }
         }
     }
     return detected;
@@ -172,7 +177,12 @@ ErrorCode RadioLibInterface::send(meshtastic_MeshPacket *p)
     printPacket("enqueue for send", p);
 
     LOG_DEBUG("txGood=%d,txRelay=%d,rxGood=%d,rxBad=%d", txGood, txRelay, rxGood, rxBad);
-    ErrorCode res = txQueue.enqueue(p) ? ERRNO_OK : ERRNO_UNKNOWN;
+    bool dropped = false;
+    ErrorCode res = txQueue.enqueue(p, &dropped) ? ERRNO_OK : ERRNO_UNKNOWN;
+
+    if (dropped) {
+        txDrop++;
+    }
 
     if (res != ERRNO_OK) { // we weren't able to queue it, so we must drop it to prevent leaks
         packetPool.release(p);
@@ -314,6 +324,7 @@ void RadioLibInterface::onNotify(uint32_t notification)
                         // actual transmission as short as possible
                         uint32_t old_id = txp->id;
                         txp = txQueue.dequeue();
+<<<<<<< HEAD
                         if (txp && old_id == txp->id) {
                             bool sent = startSend(txp);
                             if (sent) {
@@ -329,6 +340,10 @@ void RadioLibInterface::onNotify(uint32_t notification)
                             LOG_DEBUG("Expected tx packet changed or disappeared"); 
                         }
 
+=======
+                        assert(txp);
+                        startSend(txp);
+>>>>>>> origin/destinations_leaps
                         LOG_DEBUG("%d packets remain in the TX queue", txQueue.getMaxLen() - txQueue.getFree());
                     }
                 }
@@ -354,7 +369,7 @@ void RadioLibInterface::setTransmitDelay()
     // So we want to make sure the other side has had a chance to reconfigure its radio.
 
     if (p->tx_after) {
-        unsigned long add_delay = p->rx_rssi ? getTxDelayMsecWeighted(p->rx_snr) : getTxDelayMsec();
+        unsigned long add_delay = p->rx_rssi ? getTxDelayMsecWeighted(p) : getTxDelayMsec();
         unsigned long now = millis();
         p->tx_after = min(max(p->tx_after + add_delay, now + add_delay), now + 2 * getTxDelayMsecWeightedWorst(p->rx_snr));
         notifyLater(p->tx_after - now, TRANSMIT_DELAY_COMPLETED, false);
@@ -367,7 +382,7 @@ void RadioLibInterface::setTransmitDelay()
     } else {
         // If there is a SNR, start a timer scaled based on that SNR.
         LOG_DEBUG("rx_snr found. hop_limit:%d rx_snr:%f", p->hop_limit, p->rx_snr);
-        startTransmitTimerSNR(p->rx_snr);
+        startTransmitTimerRebroadcast(p);
     }
 }
 
@@ -380,11 +395,11 @@ void RadioLibInterface::startTransmitTimer(bool withDelay)
     }
 }
 
-void RadioLibInterface::startTransmitTimerSNR(float snr)
+void RadioLibInterface::startTransmitTimerRebroadcast(meshtastic_MeshPacket *p)
 {
     // If we have work to do and the timer wasn't already scheduled, schedule it now
     if (!txQueue.empty()) {
-        uint32_t delay = getTxDelayMsecWeighted(snr);
+        uint32_t delay = getTxDelayMsecWeighted(p);
         notifyLater(delay, TRANSMIT_DELAY_COMPLETED, false); // This will implicitly enable
     }
 }
@@ -398,10 +413,14 @@ void RadioLibInterface::clampToLateRebroadcastWindow(NodeNum from, PacketId id)
     meshtastic_MeshPacket *p = txQueue.remove(from, id, true, false);
     if (p) {
         p->tx_after = millis() + getTxDelayMsecWeightedWorst(p->rx_snr);
-        if (txQueue.enqueue(p)) {
+        bool dropped = false;
+        if (txQueue.enqueue(p, &dropped)) {
             LOG_DEBUG("Move existing queued packet to the late rebroadcast window %dms from now", p->tx_after - millis());
         } else {
             packetPool.release(p);
+        }
+        if (dropped) {
+            txDrop++;
         }
     }
 }
@@ -527,6 +546,10 @@ void RadioLibInterface::completeSending()
     sendingPacket = NULL;
 
     if (p) {
+        // Packet has been sent, count it toward our TX airtime utilization.
+        uint32_t xmitMsec = getPacketTime(p);
+        airTime->logAirtime(TX_LOG, xmitMsec);
+
         txGood++;
         if (!isFromUs(p))
             txRelay++;
@@ -539,8 +562,6 @@ void RadioLibInterface::completeSending()
 
 void RadioLibInterface::handleReceiveInterrupt()
 {
-    uint32_t xmitMsec;
-
     // when this is called, we should be in receive mode - if we are not, just jump out instead of bombing. Possible Race
     // Condition?
     if (!isReceiving) {
@@ -553,27 +574,28 @@ void RadioLibInterface::handleReceiveInterrupt()
     // read the number of actually received bytes
     size_t length = iface->getPacketLength();
 
-    xmitMsec = getPacketTime(length);
+    uint32_t rxMsec = getPacketTime(length, true);
 
 #ifndef DISABLE_WELCOME_UNSET
     if (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET) {
         LOG_WARN("lora rx disabled: Region unset");
-        airTime->logAirtime(RX_ALL_LOG, xmitMsec);
+        airTime->logAirtime(RX_ALL_LOG, rxMsec);
         return;
     }
 #endif
 
     int state = iface->readData((uint8_t *)&radioBuffer, length);
 #if ARCH_PORTDUINO
-    if (settingsMap[logoutputlevel] == level_trace) {
+    if (portduino_config.logoutputlevel == level_trace) {
         printBytes("Raw incoming packet: ", (uint8_t *)&radioBuffer, length);
     }
 #endif
     if (state != RADIOLIB_ERR_NONE) {
-        LOG_ERROR("Ignore received packet due to error=%d", state);
+        LOG_ERROR("Ignore received packet due to error=%d (maybe to=0x%08x, from=0x%08x, flags=0x%02x)", state,
+                  radioBuffer.header.to, radioBuffer.header.from, radioBuffer.header.flags);
         rxBad++;
 
-        airTime->logAirtime(RX_ALL_LOG, xmitMsec);
+        airTime->logAirtime(RX_ALL_LOG, rxMsec);
 
     } else {
         // Skip the 4 headers that are at the beginning of the rxBuf
@@ -583,7 +605,7 @@ void RadioLibInterface::handleReceiveInterrupt()
         if (payloadLen < 0) {
             LOG_WARN("Ignore received packet too short");
             rxBad++;
-            airTime->logAirtime(RX_ALL_LOG, xmitMsec);
+            airTime->logAirtime(RX_ALL_LOG, rxMsec);
         } else {
             rxGood++;
             // altered packet with "from == 0" can do Remote Node Administration without permission
@@ -620,8 +642,8 @@ void RadioLibInterface::handleReceiveInterrupt()
             mp->encrypted.size = payloadLen;
 
             printPacket("Lora RX", mp);
-        
-            airTime->logAirtime(RX_LOG, xmitMsec);
+
+            airTime->logAirtime(RX_LOG, rxMsec);
 
             deliverToReceiver(mp);
         }

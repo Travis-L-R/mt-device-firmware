@@ -43,6 +43,10 @@
 #if !defined(ARCH_STM32WL) && !MESHTASTIC_EXCLUDE_I2C
 #include "motion/AccelerometerThread.h"
 #endif
+#if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040)) && !defined(CONFIG_IDF_TARGET_ESP32S2) &&               \
+    !defined(CONFIG_IDF_TARGET_ESP32C3)
+#include "SerialModule.h"
+#endif
 
 AdminModule *adminModule;
 bool hasOpenEditTransaction;
@@ -100,6 +104,10 @@ bool AdminModule::handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshta
             (config.security.admin_key[2].size == 32 &&
              memcmp(mp.public_key.bytes, config.security.admin_key[2].bytes, 32) == 0)) {
             LOG_INFO("PKC admin payload with authorized sender key");
+            auto remoteNode = nodeDB->getMeshNode(mp.from);
+            if (remoteNode && !remoteNode->is_favorite) {
+                remoteNode->is_favorite = true;
+            }
         } else {
             myReply = allocErrorResponse(meshtastic_Routing_Error_ADMIN_PUBLIC_KEY_UNAUTHORIZED, &mp);
             LOG_INFO("Received PKC admin payload, but the sender public key does not match the admin authorized key!");
@@ -501,7 +509,9 @@ bool AdminModule::handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshta
     if (mp.decoded.want_response && !myReply) {
         myReply = allocErrorResponse(meshtastic_Routing_Error_NONE, &mp);
     }
-
+    if (mp.pki_encrypted && myReply) {
+        myReply->pki_encrypted = true;
+    }
     return handled;
 }
 
@@ -544,10 +554,8 @@ void AdminModule::handleSetOwner(const meshtastic_User &o)
         changed |= strcmp(owner.short_name, o.short_name);
         strncpy(owner.short_name, o.short_name, sizeof(owner.short_name));
     }
-    if (*o.id) {
-        changed |= strcmp(owner.id, o.id);
-        strncpy(owner.id, o.id, sizeof(owner.id));
-    }
+    snprintf(owner.id, sizeof(owner.id), "!%08x", nodeDB->getNodeNum());
+
     if (owner.is_licensed != o.is_licensed) {
         changed = 1;
         owner.is_licensed = o.is_licensed;
@@ -601,10 +609,9 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
         }
         config.device = c.payload_variant.device;
         if (config.device.rebroadcast_mode == meshtastic_Config_DeviceConfig_RebroadcastMode_NONE &&
-            IS_ONE_OF(config.device.role, meshtastic_Config_DeviceConfig_Role_ROUTER,
-                      meshtastic_Config_DeviceConfig_Role_REPEATER)) {
+            config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER) {
             config.device.rebroadcast_mode = meshtastic_Config_DeviceConfig_RebroadcastMode_ALL;
-            const char *warning = "Rebroadcast mode can't be set to NONE for a router or repeater";
+            const char *warning = "Rebroadcast mode can't be set to NONE for a router";
             LOG_WARN(warning);
             sendWarning(warning);
         }
@@ -617,8 +624,9 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
             LOG_DEBUG("Tried to set node_info_broadcast_secs too low, setting to %d", min_node_info_broadcast_secs);
             config.device.node_info_broadcast_secs = min_node_info_broadcast_secs;
         }
-        // Router Client is deprecated; Set it to client
-        if (c.payload_variant.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_CLIENT) {
+        // Router Client and Repeater deprecated; Set it to client
+        if (IS_ONE_OF(c.payload_variant.device.role, meshtastic_Config_DeviceConfig_Role_ROUTER_CLIENT,
+                      meshtastic_Config_DeviceConfig_Role_REPEATER)) {
             config.device.role = meshtastic_Config_DeviceConfig_Role_CLIENT;
             if (moduleConfig.store_forward.enabled && !moduleConfig.store_forward.is_server) {
                 moduleConfig.store_forward.is_server = true;
@@ -627,10 +635,9 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
             }
         }
 #if USERPREFS_EVENT_MODE
-        // If we're in event mode, nobody is a Router or Repeater
+        // If we're in event mode, nobody is a Router or Router Late
         if (config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER ||
-            config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE ||
-            config.device.role == meshtastic_Config_DeviceConfig_Role_REPEATER) {
+            config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE) {
             config.device.role = meshtastic_Config_DeviceConfig_Role_CLIENT;
         }
 #endif
@@ -638,7 +645,16 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
     case meshtastic_Config_position_tag:
         LOG_INFO("Set config: Position");
         config.has_position = true;
+        // If we have turned off the GPS (disabled or not present) and we're not using fixed position,
+        // clear the stored position since it may not get updated
+        if (config.position.gps_mode == meshtastic_Config_PositionConfig_GpsMode_ENABLED &&
+            c.payload_variant.position.gps_mode != meshtastic_Config_PositionConfig_GpsMode_ENABLED &&
+            config.position.fixed_position == false && c.payload_variant.position.fixed_position == false) {
+            nodeDB->clearLocalPosition();
+            saveChanges(SEGMENT_NODEDATABASE | SEGMENT_CONFIG, false);
+        }
         config.position = c.payload_variant.position;
+
         // Save nodedb as well in case we got a fixed position packet
         break;
     case meshtastic_Config_power_tag:
@@ -688,22 +704,49 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
 #endif
         config.display = c.payload_variant.display;
         break;
-    case meshtastic_Config_lora_tag:
+
+    case meshtastic_Config_lora_tag: {
+        // Wrap the entire case in a block to scope variables and avoid crossing initialization
+        auto oldLoraConfig = config.lora;
+        auto validatedLora = c.payload_variant.lora;
+
         LOG_INFO("Set config: LoRa");
         config.has_lora = true;
+
+        if (validatedLora.coding_rate < 4 || validatedLora.coding_rate > 8) {
+            LOG_WARN("Invalid coding_rate %d, setting to 5", validatedLora.coding_rate);
+            validatedLora.coding_rate = 5;
+        }
+
+        if (validatedLora.spread_factor < 7 || validatedLora.spread_factor > 12) {
+            LOG_WARN("Invalid spread_factor %d, setting to 11", validatedLora.spread_factor);
+            validatedLora.spread_factor = 11;
+        }
+
+        if (validatedLora.bandwidth == 0) {
+            int originalBandwidth = validatedLora.bandwidth;
+            validatedLora.bandwidth = myRegion->wideLora ? 800 : 250;
+            LOG_WARN("Invalid bandwidth %d, setting to default", originalBandwidth);
+        }
+
         // If no lora radio parameters change, don't need to reboot
-        if (config.lora.use_preset == c.payload_variant.lora.use_preset && config.lora.region == c.payload_variant.lora.region &&
-            config.lora.modem_preset == c.payload_variant.lora.modem_preset &&
-            config.lora.bandwidth == c.payload_variant.lora.bandwidth &&
-            config.lora.spread_factor == c.payload_variant.lora.spread_factor &&
-            config.lora.coding_rate == c.payload_variant.lora.coding_rate &&
-            config.lora.tx_power == c.payload_variant.lora.tx_power &&
-            config.lora.frequency_offset == c.payload_variant.lora.frequency_offset &&
-            config.lora.override_frequency == c.payload_variant.lora.override_frequency &&
-            config.lora.channel_num == c.payload_variant.lora.channel_num &&
-            config.lora.sx126x_rx_boosted_gain == c.payload_variant.lora.sx126x_rx_boosted_gain) {
+        if (oldLoraConfig.use_preset == validatedLora.use_preset && oldLoraConfig.region == validatedLora.region &&
+            oldLoraConfig.modem_preset == validatedLora.modem_preset && oldLoraConfig.bandwidth == validatedLora.bandwidth &&
+            oldLoraConfig.spread_factor == validatedLora.spread_factor &&
+            oldLoraConfig.coding_rate == validatedLora.coding_rate && oldLoraConfig.tx_power == validatedLora.tx_power &&
+            oldLoraConfig.frequency_offset == validatedLora.frequency_offset &&
+            oldLoraConfig.override_frequency == validatedLora.override_frequency &&
+            oldLoraConfig.channel_num == validatedLora.channel_num &&
+            oldLoraConfig.sx126x_rx_boosted_gain == validatedLora.sx126x_rx_boosted_gain) {
             requiresReboot = false;
         }
+
+#if defined(ARCH_PORTDUINO)
+        // If running on portduino and using SimRadio, do not require reboot
+        if (SimRadio::instance) {
+            requiresReboot = false;
+        }
+#endif
 
 #ifdef RF95_FAN_EN
         // Turn PA off if disabled by config
@@ -713,9 +756,15 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
             digitalWrite(RF95_FAN_EN, HIGH ^ 0);
         }
 #endif
+<<<<<<< HEAD
         config.lora = c.payload_variant.lora;
         // If we're setting region for the first time, init the region
         if (isRegionUnset && config.lora.region > meshtastic_LoRaConfig_RegionCode_UNSET) {
+=======
+        config.lora = validatedLora;
+        // If we're setting region for the first time, init the region and regenerate the keys
+        if (isRegionUnset && config.lora.region > meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
+>>>>>>> origin/destinations_leaps
             if (!owner.is_licensed) {
                 bool keygenSuccess = false;
                 if (config.security.private_key.size == 32) {
@@ -739,12 +788,26 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
             if (myRegion->dutyCycle < 100) {
                 config.lora.ignore_mqtt = true; // Ignore MQTT by default if region has a duty cycle limit
             }
+            //  Compare the entire string, we are sure of the length as a topic has never been set
             if (strcmp(moduleConfig.mqtt.root, default_mqtt_root) == 0) {
                 sprintf(moduleConfig.mqtt.root, "%s/%s", default_mqtt_root, myRegion->name);
                 changes = SEGMENT_CONFIG | SEGMENT_MODULECONFIG;
             }
         }
+        if (config.lora.region != myRegion->code) {
+            //  Region has changed so check whether there is a regulatory one we should be using instead.
+            //  Additionally as a side-effect, assume a new value under myRegion
+            initRegion();
+
+            if (strncmp(moduleConfig.mqtt.root, default_mqtt_root, strlen(default_mqtt_root)) == 0) {
+                //  Default root is in use, so subscribe to the appropriate MQTT topic for this region
+                sprintf(moduleConfig.mqtt.root, "%s/%s", default_mqtt_root, myRegion->name);
+            }
+
+            changes = SEGMENT_CONFIG | SEGMENT_MODULECONFIG;
+        }
         break;
+    }
     case meshtastic_Config_bluetooth_tag:
         LOG_INFO("Set config: Bluetooth");
         config.has_bluetooth = true;
@@ -759,8 +822,7 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
             if (config.security.private_key.size != 32) {
                 crypto->generateKeyPair(config.security.public_key.bytes, config.security.private_key.bytes);
 
-            } else if (config.security.public_key.size != 32) {
-                // We check for a potentially valid private key, and a blank public key, and regen the public key if needed.
+            } else {
                 if (crypto->regeneratePublicKey(config.security.public_key.bytes, config.security.private_key.bytes)) {
                     config.security.public_key.size = 32;
                 }
@@ -803,8 +865,13 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
 
 bool AdminModule::handleSetModuleConfig(const meshtastic_ModuleConfig &c)
 {
-    if (!hasOpenEditTransaction)
+    // If we are in an open transaction or configuring MQTT or Serial (which have validation), defer disabling Bluetooth
+    // Otherwise, disable Bluetooth to prevent the phone from interfering with the config
+    if (!hasOpenEditTransaction &&
+        !IS_ONE_OF(c.which_payload_variant, meshtastic_ModuleConfig_mqtt_tag, meshtastic_ModuleConfig_serial_tag)) {
         disableBluetooth();
+    }
+
     switch (c.which_payload_variant) {
     case meshtastic_ModuleConfig_mqtt_tag:
 #if MESHTASTIC_EXCLUDE_MQTT
@@ -815,12 +882,22 @@ bool AdminModule::handleSetModuleConfig(const meshtastic_ModuleConfig &c)
         if (!MQTT::isValidConfig(c.payload_variant.mqtt)) {
             return false;
         }
+        // Disable Bluetooth to prevent interference during MQTT configuration
+        disableBluetooth();
         moduleConfig.has_mqtt = true;
         moduleConfig.mqtt = c.payload_variant.mqtt;
 #endif
         break;
     case meshtastic_ModuleConfig_serial_tag:
         LOG_INFO("Set module config: Serial");
+#if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040)) && !defined(CONFIG_IDF_TARGET_ESP32S2) &&               \
+    !defined(CONFIG_IDF_TARGET_ESP32C3)
+        if (!SerialModule::isValidConfig(c.payload_variant.serial)) {
+            LOG_ERROR("Invalid serial config");
+            return false;
+        }
+        disableBluetooth(); // Disable Bluetooth to prevent interference during Serial configuration
+#endif
         moduleConfig.has_serial = true;
         moduleConfig.serial = c.payload_variant.serial;
         break;
@@ -912,6 +989,9 @@ void AdminModule::handleGetOwner(const meshtastic_MeshPacket &req)
         res.which_payload_variant = meshtastic_AdminMessage_get_owner_response_tag;
         setPassKey(&res);
         myReply = allocDataProtobuf(res);
+        if (req.pki_encrypted) {
+            myReply->pki_encrypted = true;
+        }
     }
 }
 
@@ -981,12 +1061,16 @@ void AdminModule::handleGetConfig(const meshtastic_MeshPacket &req, const uint32
         // So even if we internally use 0 to represent 'use default' we still need to send the value we are
         // using to the app (so that even old phone apps work with new device loads).
         // r.get_radio_response.preferences.ls_secs = getPref_ls_secs();
-        // hideSecret(r.get_radio_response.preferences.wifi_ssid); // hmm - leave public for now, because only minimally private
-        // and useful for users to know current provisioning) hideSecret(r.get_radio_response.preferences.wifi_password);
-        // r.get_config_response.which_payloadVariant = Config_ModuleConfig_telemetry_tag;
+        // hideSecret(r.get_radio_response.preferences.wifi_ssid); // hmm - leave public for now, because only minimally
+        // private and useful for users to know current provisioning)
+        // hideSecret(r.get_radio_response.preferences.wifi_password); r.get_config_response.which_payloadVariant =
+        // Config_ModuleConfig_telemetry_tag;
         res.which_payload_variant = meshtastic_AdminMessage_get_config_response_tag;
         setPassKey(&res);
         myReply = allocDataProtobuf(res);
+        if (req.pki_encrypted) {
+            myReply->pki_encrypted = true;
+        }
     }
 }
 
@@ -1067,12 +1151,16 @@ void AdminModule::handleGetModuleConfig(const meshtastic_MeshPacket &req, const 
         // So even if we internally use 0 to represent 'use default' we still need to send the value we are
         // using to the app (so that even old phone apps work with new device loads).
         // r.get_radio_response.preferences.ls_secs = getPref_ls_secs();
-        // hideSecret(r.get_radio_response.preferences.wifi_ssid); // hmm - leave public for now, because only minimally private
-        // and useful for users to know current provisioning) hideSecret(r.get_radio_response.preferences.wifi_password);
-        // r.get_config_response.which_payloadVariant = Config_ModuleConfig_telemetry_tag;
+        // hideSecret(r.get_radio_response.preferences.wifi_ssid); // hmm - leave public for now, because only minimally
+        // private and useful for users to know current provisioning)
+        // hideSecret(r.get_radio_response.preferences.wifi_password); r.get_config_response.which_payloadVariant =
+        // Config_ModuleConfig_telemetry_tag;
         res.which_payload_variant = meshtastic_AdminMessage_get_module_config_response_tag;
         setPassKey(&res);
         myReply = allocDataProtobuf(res);
+        if (req.pki_encrypted) {
+            myReply->pki_encrypted = true;
+        }
     }
 }
 
@@ -1097,6 +1185,9 @@ void AdminModule::handleGetNodeRemoteHardwarePins(const meshtastic_MeshPacket &r
     }
     setPassKey(&r);
     myReply = allocDataProtobuf(r);
+    if (req.pki_encrypted) {
+        myReply->pki_encrypted = true;
+    }
 }
 
 void AdminModule::handleGetDeviceMetadata(const meshtastic_MeshPacket &req)
@@ -1106,6 +1197,9 @@ void AdminModule::handleGetDeviceMetadata(const meshtastic_MeshPacket &req)
     r.which_payload_variant = meshtastic_AdminMessage_get_device_metadata_response_tag;
     setPassKey(&r);
     myReply = allocDataProtobuf(r);
+    if (req.pki_encrypted) {
+        myReply->pki_encrypted = true;
+    }
 }
 
 void AdminModule::handleGetDeviceConnectionStatus(const meshtastic_MeshPacket &req)
@@ -1174,6 +1268,9 @@ void AdminModule::handleGetDeviceConnectionStatus(const meshtastic_MeshPacket &r
     r.which_payload_variant = meshtastic_AdminMessage_get_device_connection_status_response_tag;
     setPassKey(&r);
     myReply = allocDataProtobuf(r);
+    if (req.pki_encrypted) {
+        myReply->pki_encrypted = true;
+    }
 }
 
 void AdminModule::handleGetChannel(const meshtastic_MeshPacket &req, uint32_t channelIndex)
@@ -1185,6 +1282,9 @@ void AdminModule::handleGetChannel(const meshtastic_MeshPacket &req, uint32_t ch
         r.which_payload_variant = meshtastic_AdminMessage_get_channel_response_tag;
         setPassKey(&r);
         myReply = allocDataProtobuf(r);
+        if (req.pki_encrypted) {
+            myReply->pki_encrypted = true;
+        }
     }
 }
 
@@ -1194,6 +1294,9 @@ void AdminModule::handleGetDeviceUIConfig(const meshtastic_MeshPacket &req)
     r.which_payload_variant = meshtastic_AdminMessage_get_ui_config_response_tag;
     r.get_ui_config_response = uiconfig;
     myReply = allocDataProtobuf(r);
+    if (req.pki_encrypted) {
+        myReply->pki_encrypted = true;
+    }
 }
 
 void AdminModule::reboot(int32_t seconds)
