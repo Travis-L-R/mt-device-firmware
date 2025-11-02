@@ -33,6 +33,9 @@ typedef struct _meshtastic_DestinationsConfig {
     /* Configuration slots for custom handling of specified destinations */
     pb_size_t destinations_count;
     meshtastic_DestinationsConfig_MeshDestination destinations[8];
+    /* Option to select alternative channel to send nodeinfo broadcasts out on.
+ E.g. for if your primary channel is private but you still want your info to appear on a default (but secondary) channel */
+    uint8_t nodeinfo_channel;
 } meshtastic_DestinationsConfig;
 
 
@@ -41,9 +44,9 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default}}
+#define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default}, 0}
 #define meshtastic_DestinationsConfig_MeshDestination_init_default {0, false, 0, false, 0}
-#define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero}}
+#define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero}, 0}
 #define meshtastic_DestinationsConfig_MeshDestination_init_zero {0, false, 0, false, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
@@ -55,6 +58,7 @@ extern "C" {
 #define meshtastic_DestinationsConfig_telemetry_dest_tag 3
 #define meshtastic_DestinationsConfig_position_dest_tag 4
 #define meshtastic_DestinationsConfig_destinations_tag 5
+#define meshtastic_DestinationsConfig_nodeinfo_channel_tag 6
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_DestinationsConfig_FIELDLIST(X, a) \
@@ -62,7 +66,8 @@ X(a, STATIC,   SINGULAR, UINT32,   default_dest,      1) \
 X(a, STATIC,   SINGULAR, UINT32,   nodeinfo_dest,     2) \
 X(a, STATIC,   SINGULAR, UINT32,   telemetry_dest,    3) \
 X(a, STATIC,   SINGULAR, UINT32,   position_dest,     4) \
-X(a, STATIC,   REPEATED, MESSAGE,  destinations,      5)
+X(a, STATIC,   REPEATED, MESSAGE,  destinations,      5) \
+X(a, STATIC,   SINGULAR, UINT32,   nodeinfo_channel,   6)
 #define meshtastic_DestinationsConfig_CALLBACK NULL
 #define meshtastic_DestinationsConfig_DEFAULT NULL
 #define meshtastic_DestinationsConfig_destinations_MSGTYPE meshtastic_DestinationsConfig_MeshDestination
@@ -84,7 +89,7 @@ extern const pb_msgdesc_t meshtastic_DestinationsConfig_MeshDestination_msg;
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_MAX_SIZE meshtastic_DestinationsConfig_size
 #define meshtastic_DestinationsConfig_MeshDestination_size 12
-#define meshtastic_DestinationsConfig_size       136
+#define meshtastic_DestinationsConfig_size       139
 
 #ifdef __cplusplus
 } /* extern "C" */
