@@ -253,13 +253,8 @@ typedef enum _meshtastic_HardwareModel {
     meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1 = 99,
     /* Seeed Tracker L1 EINK driver */
     meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1_EINK = 100,
-<<<<<<< HEAD
-    /* Reserved ID for future and past use */
-    meshtastic_HardwareModel_QWANTZ_TINY_ARMS = 101,
-=======
     /* Muzi Works R1 Neo */
     meshtastic_HardwareModel_MUZI_R1_NEO = 101,
->>>>>>> origin/destinations_leaps
     /* Lilygo T-Deck Pro */
     meshtastic_HardwareModel_T_DECK_PRO = 102,
     /* Lilygo TLora Pager */
@@ -272,8 +267,6 @@ typedef enum _meshtastic_HardwareModel {
     meshtastic_HardwareModel_RAK3312 = 106,
     /* Elecrow ThinkNode M5 https://www.elecrow.com/wiki/ThinkNode_M5_Meshtastic_LoRa_Signal_Transceiver_ESP32-S3.html */
     meshtastic_HardwareModel_THINKNODE_M5 = 107,
-<<<<<<< HEAD
-=======
     /* MeshSolar is an integrated power management and communication solution designed for outdoor low-power devices.
  https://heltec.org/project/meshsolar/ */
     meshtastic_HardwareModel_HELTEC_MESH_SOLAR = 108,
@@ -295,7 +288,6 @@ typedef enum _meshtastic_HardwareModel {
     meshtastic_HardwareModel_WISMESH_TAP_V2 = 116,
     /* RAK3401 */
     meshtastic_HardwareModel_RAK3401 = 117,
->>>>>>> origin/destinations_leaps
     /* ------------------------------------------------------------------------------------------------------------------------------------------
  Reserved ID For developing private Ports. These will show up in live traffic sparsely, so we can use a high number. Keep it within 8 bits.
  ------------------------------------------------------------------------------------------------------------------------------------------ */
@@ -2099,11 +2091,7 @@ extern const pb_msgdesc_t meshtastic_LeapData_msg;
 #define meshtastic_LeapData_size                 30
 #define meshtastic_LogRecord_size                426
 #define meshtastic_LowEntropyKey_size            0
-<<<<<<< HEAD
-#define meshtastic_MeshPacket_size               410
-=======
 #define meshtastic_MeshPacket_size               413
->>>>>>> origin/destinations_leaps
 #define meshtastic_MqttClientProxyMessage_size   501
 #define meshtastic_MyNodeInfo_size               83
 #define meshtastic_NeighborInfo_size             258
