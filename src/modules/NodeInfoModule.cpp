@@ -78,6 +78,9 @@ void NodeInfoModule::sendOurNodeInfo(NodeNum dest, bool wantReplies, uint8_t cha
         if (channel > 0) {
             LOG_DEBUG("Send ourNodeInfo to channel %d", channel);
             p->channel = channel;
+        } else if (dest == NODENUM_PLACEHOLDER && config.has_destinations && config.destinations.nodeinfo_channel != 0) {
+            LOG_DEBUG("Send ourNodeInfo to selected channel %d", config.destinations.nodeinfo_channel);
+            p->channel = config.destinations.nodeinfo_channel;
         }
 
         prevPacketId = p->id;
