@@ -114,8 +114,8 @@ void menuHandler::LoraRegionPicker(uint32_t duration)
     bannerOptions.optionsCount = 27;
     bannerOptions.InitialSelected = 0;
     bannerOptions.bannerCallback = [](int selected) -> void {
-        if (selected != 0 && config.lora.region != _meshtastic_Config_LoRaConfig_RegionCode(selected)) {
-            config.lora.region = _meshtastic_Config_LoRaConfig_RegionCode(selected);
+        if (selected != 0 && config.lora.region != _meshtastic_LoRaConfig_RegionCode(selected)) {
+            config.lora.region = _meshtastic_LoRaConfig_RegionCode(selected);
             auto changes = SEGMENT_CONFIG;
 
             // This is needed as we wait til picking the LoRa region to generate keys for the first time.

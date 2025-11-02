@@ -756,15 +756,9 @@ void AdminModule::handleSetConfig(const meshtastic_Config &c)
             digitalWrite(RF95_FAN_EN, HIGH ^ 0);
         }
 #endif
-<<<<<<< HEAD
-        config.lora = c.payload_variant.lora;
-        // If we're setting region for the first time, init the region
-        if (isRegionUnset && config.lora.region > meshtastic_LoRaConfig_RegionCode_UNSET) {
-=======
         config.lora = validatedLora;
         // If we're setting region for the first time, init the region and regenerate the keys
-        if (isRegionUnset && config.lora.region > meshtastic_Config_LoRaConfig_RegionCode_UNSET) {
->>>>>>> origin/destinations_leaps
+        if (isRegionUnset && config.lora.region > meshtastic_LoRaConfig_RegionCode_UNSET) {
             if (!owner.is_licensed) {
                 bool keygenSuccess = false;
                 if (config.security.private_key.size == 32) {
