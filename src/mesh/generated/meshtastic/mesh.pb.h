@@ -779,99 +779,6 @@ typedef struct _meshtastic_MqttClientProxyMessage {
     bool retained;
 } meshtastic_MqttClientProxyMessage;
 
-<<<<<<< HEAD
-=======
-typedef PB_BYTES_ARRAY_T(256) meshtastic_MeshPacket_encrypted_t;
-typedef PB_BYTES_ARRAY_T(32) meshtastic_MeshPacket_public_key_t;
-/* A packet envelope sent/received over the mesh
- only payload_variant is sent in the payload portion of the LORA packet.
- The other fields are either not sent at all, or sent in the special 16 byte LORA header. */
-typedef struct _meshtastic_MeshPacket {
-    /* The sending node number.
- Note: Our crypto implementation uses this field as well.
- See [crypto](/docs/overview/encryption) for details. */
-    uint32_t from;
-    /* The (immediate) destination for this packet */
-    uint32_t to;
-    /* (Usually) If set, this indicates the index in the secondary_channels table that this packet was sent/received on.
- If unset, packet was on the primary channel.
- A particular node might know only a subset of channels in use on the mesh.
- Therefore channel_index is inherently a local concept and meaningless to send between nodes.
- Very briefly, while sending and receiving deep inside the device Router code, this field instead
- contains the 'channel hash' instead of the index.
- This 'trick' is only used while the payload_variant is an 'encrypted'. */
-    uint8_t channel;
-    pb_size_t which_payload_variant;
-    union {
-        /* TODO: REPLACE */
-        meshtastic_Data decoded;
-        /* TODO: REPLACE */
-        meshtastic_MeshPacket_encrypted_t encrypted;
-    };
-    /* A unique ID for this packet.
- Always 0 for no-ack packets or non broadcast packets (and therefore take zero bytes of space).
- Otherwise a unique ID for this packet, useful for flooding algorithms.
- ID only needs to be unique on a _per sender_ basis, and it only
- needs to be unique for a few minutes (long enough to last for the length of
- any ACK or the completion of a mesh broadcast flood).
- Note: Our crypto implementation uses this id as well.
- See [crypto](/docs/overview/encryption) for details. */
-    uint32_t id;
-    /* The time this message was received by the esp32 (secs since 1970).
- Note: this field is _never_ sent on the radio link itself (to save space) Times
- are typically not sent over the mesh, but they will be added to any Packet
- (chain of SubPacket) sent to the phone (so the phone can know exact time of reception) */
-    uint32_t rx_time;
-    /* *Never* sent over the radio links.
- Set during reception to indicate the SNR of this packet.
- Used to collect statistics on current link quality. */
-    float rx_snr;
-    /* If unset treated as zero (no forwarding, send to direct neighbor nodes only)
- if 1, allow hopping through one node, etc...
- For our usecase real world topologies probably have a max of about 3.
- This field is normally placed into a few of bits in the header. */
-    uint8_t hop_limit;
-    /* This packet is being sent as a reliable message, we would prefer it to arrive at the destination.
- We would like to receive a ack packet in response.
- Broadcasts messages treat this flag specially: Since acks for broadcasts would
- rapidly flood the channel, the normal ack behavior is suppressed.
- Instead, the original sender listens to see if at least one node is rebroadcasting this packet (because naive flooding algorithm).
- If it hears that the odds (given typical LoRa topologies) the odds are very high that every node should eventually receive the message.
- So FloodingRouter.cpp generates an implicit ack which is delivered to the original sender.
- If after some time we don't hear anyone rebroadcast our packet, we will timeout and retransmit, using the regular resend logic.
- Note: This flag is normally sent in a flag bit in the header when sent over the wire */
-    bool want_ack;
-    /* The priority of this message for sending.
- See MeshPacket.Priority description for more details. */
-    meshtastic_MeshPacket_Priority priority;
-    /* rssi of received packet. Only sent to phone for dispay purposes. */
-    int32_t rx_rssi;
-    /* Describe if this message is delayed */
-    meshtastic_MeshPacket_Delayed delayed;
-    /* Describes whether this packet passed via MQTT somewhere along the path it currently took. */
-    bool via_mqtt;
-    /* Hop limit with which the original packet started. Sent via LoRa using three bits in the unencrypted header.
- When receiving a packet, the difference between hop_start and hop_limit gives how many hops it traveled. */
-    uint8_t hop_start;
-    /* Records the public key the packet was encrypted with, if applicable. */
-    meshtastic_MeshPacket_public_key_t public_key;
-    /* Indicates whether the packet was en/decrypted using PKI */
-    bool pki_encrypted;
-    /* Last byte of the node number of the node that should be used as the next hop in routing.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint8_t next_hop;
-    /* Last byte of the node number of the node that will relay/relayed this packet.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint8_t relay_node;
-    /* *Never* sent over the radio links.
- Timestamp after which this packet may be sent.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint32_t tx_after;
-    /* Indicates which transport mechanism this packet arrived over */
-    meshtastic_MeshPacket_TransportMechanism transport_mechanism;
-} meshtastic_MeshPacket;
-
->>>>>>> destinations_main
 /* The bluetooth to device link:
  Old BTLE protocol docs from TODO, merge in above and make real docs...
  use protocol buffers, and NanoPB
@@ -1103,7 +1010,8 @@ typedef struct _meshtastic_DeviceMetadata {
 /* A heartbeat message is sent to the node from the client to keep the connection alive.
  This is currently only needed to keep serial connections alive, but can be used by any PhoneAPI. */
 typedef struct _meshtastic_Heartbeat {
-    char dummy_field;
+    /* The nonce of the heartbeat message */
+    uint32_t nonce;
 } meshtastic_Heartbeat;
 
 /* RemoteHardwarePins associated with a node */
@@ -1289,6 +1197,8 @@ typedef struct _meshtastic_MeshPacket {
  Timestamp after which this packet may be sent.
  Set by the firmware internally, clients are not supposed to set this. */
     uint32_t tx_after;
+    /* Indicates which transport mechanism this packet arrived over */
+    meshtastic_MeshPacket_TransportMechanism transport_mechanism;
 } meshtastic_MeshPacket;
 
 /* Packets from the radio to the phone will appear on the fromRadio characteristic.
@@ -1344,16 +1254,6 @@ typedef struct _meshtastic_FromRadio {
     };
 } meshtastic_FromRadio;
 
-<<<<<<< HEAD
-=======
-/* A heartbeat message is sent to the node from the client to keep the connection alive.
- This is currently only needed to keep serial connections alive, but can be used by any PhoneAPI. */
-typedef struct _meshtastic_Heartbeat {
-    /* The nonce of the heartbeat message */
-    uint32_t nonce;
-} meshtastic_Heartbeat;
-
->>>>>>> destinations_main
 /* Packets/commands to the radio will be written (reliably) to the toRadio characteristic.
  Once the write completes the phone can assume it is handled. */
 typedef struct _meshtastic_ToRadio {
@@ -1605,30 +1505,6 @@ extern "C" {
 #define meshtastic_MqttClientProxyMessage_data_tag 2
 #define meshtastic_MqttClientProxyMessage_text_tag 3
 #define meshtastic_MqttClientProxyMessage_retained_tag 4
-<<<<<<< HEAD
-=======
-#define meshtastic_MeshPacket_from_tag           1
-#define meshtastic_MeshPacket_to_tag             2
-#define meshtastic_MeshPacket_channel_tag        3
-#define meshtastic_MeshPacket_decoded_tag        4
-#define meshtastic_MeshPacket_encrypted_tag      5
-#define meshtastic_MeshPacket_id_tag             6
-#define meshtastic_MeshPacket_rx_time_tag        7
-#define meshtastic_MeshPacket_rx_snr_tag         8
-#define meshtastic_MeshPacket_hop_limit_tag      9
-#define meshtastic_MeshPacket_want_ack_tag       10
-#define meshtastic_MeshPacket_priority_tag       11
-#define meshtastic_MeshPacket_rx_rssi_tag        12
-#define meshtastic_MeshPacket_delayed_tag        13
-#define meshtastic_MeshPacket_via_mqtt_tag       14
-#define meshtastic_MeshPacket_hop_start_tag      15
-#define meshtastic_MeshPacket_public_key_tag     16
-#define meshtastic_MeshPacket_pki_encrypted_tag  17
-#define meshtastic_MeshPacket_next_hop_tag       18
-#define meshtastic_MeshPacket_relay_node_tag     19
-#define meshtastic_MeshPacket_tx_after_tag       20
-#define meshtastic_MeshPacket_transport_mechanism_tag 21
->>>>>>> destinations_main
 #define meshtastic_NodeInfo_num_tag              1
 #define meshtastic_NodeInfo_user_tag             2
 #define meshtastic_NodeInfo_position_tag         3
@@ -1698,6 +1574,7 @@ extern "C" {
 #define meshtastic_DeviceMetadata_hasRemoteHardware_tag 10
 #define meshtastic_DeviceMetadata_hasPKC_tag     11
 #define meshtastic_DeviceMetadata_excluded_modules_tag 12
+#define meshtastic_Heartbeat_nonce_tag           1
 #define meshtastic_NodeRemoteHardwarePin_node_num_tag 1
 #define meshtastic_NodeRemoteHardwarePin_pin_tag 2
 #define meshtastic_ChunkedPayload_payload_id_tag 1
@@ -1744,6 +1621,7 @@ extern "C" {
 #define meshtastic_MeshPacket_next_hop_tag       18
 #define meshtastic_MeshPacket_relay_node_tag     19
 #define meshtastic_MeshPacket_tx_after_tag       20
+#define meshtastic_MeshPacket_transport_mechanism_tag 21
 #define meshtastic_FromRadio_id_tag              1
 #define meshtastic_FromRadio_packet_tag          2
 #define meshtastic_FromRadio_my_info_tag         3
@@ -1761,7 +1639,6 @@ extern "C" {
 #define meshtastic_FromRadio_fileInfo_tag        15
 #define meshtastic_FromRadio_clientNotification_tag 16
 #define meshtastic_FromRadio_deviceuiConfig_tag  17
-#define meshtastic_Heartbeat_nonce_tag           1
 #define meshtastic_ToRadio_packet_tag            1
 #define meshtastic_ToRadio_want_config_id_tag    3
 #define meshtastic_ToRadio_disconnect_tag        4
@@ -2213,12 +2090,8 @@ extern const pb_msgdesc_t meshtastic_LeapData_msg;
 #define meshtastic_KeyVerification_size          79
 #define meshtastic_LeapData_size                 30
 #define meshtastic_LogRecord_size                426
-<<<<<<< HEAD
-#define meshtastic_MeshPacket_size               410
-=======
 #define meshtastic_LowEntropyKey_size            0
-#define meshtastic_MeshPacket_size               381
->>>>>>> destinations_main
+#define meshtastic_MeshPacket_size               413
 #define meshtastic_MqttClientProxyMessage_size   501
 #define meshtastic_MyNodeInfo_size               83
 #define meshtastic_NeighborInfo_size             258
