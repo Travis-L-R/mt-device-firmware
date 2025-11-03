@@ -59,6 +59,9 @@ typedef struct _meshtastic_DestinationsConfig {
     /* Whether to restrict leaping with LoRa radio setting changes to messages.
  Only works if only_lora_switch_from_us is not set and the message is decodable. */
     bool only_leap_switch_messages;
+    /* Option to select alternative channel to send nodeinfo broadcasts out on.
+ E.g. for if your primary channel is private but you still want your info to appear on a default (but secondary) channel */
+    uint8_t nodeinfo_channel;
 } meshtastic_DestinationsConfig;
 
 
@@ -67,9 +70,9 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default}, 0, 0, 0, 0, 0}
+#define meshtastic_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default, meshtastic_DestinationsConfig_MeshDestination_init_default}, 0, 0, 0, 0, 0, 0}
 #define meshtastic_DestinationsConfig_MeshDestination_init_default {0, false, 0, false, 0, false, 0, false, 0, false, meshtastic_LoRaConfigLite_init_default}
-#define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero}, 0, 0, 0, 0, 0}
+#define meshtastic_DestinationsConfig_init_zero  {0, 0, 0, 0, 0, {meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero, meshtastic_DestinationsConfig_MeshDestination_init_zero}, 0, 0, 0, 0, 0, 0}
 #define meshtastic_DestinationsConfig_MeshDestination_init_zero {0, false, 0, false, 0, false, 0, false, 0, false, meshtastic_LoRaConfigLite_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
@@ -89,6 +92,7 @@ extern "C" {
 #define meshtastic_DestinationsConfig_lora_switch_enabled_tag 8
 #define meshtastic_DestinationsConfig_only_lora_switch_from_us_tag 9
 #define meshtastic_DestinationsConfig_only_leap_switch_messages_tag 10
+#define meshtastic_DestinationsConfig_nodeinfo_channel_tag 11
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_DestinationsConfig_FIELDLIST(X, a) \
@@ -101,7 +105,8 @@ X(a, STATIC,   SINGULAR, BOOL,     leaps_enabled,     6) \
 X(a, STATIC,   SINGULAR, UINT32,   leap_channel,      7) \
 X(a, STATIC,   SINGULAR, BOOL,     lora_switch_enabled,   8) \
 X(a, STATIC,   SINGULAR, BOOL,     only_lora_switch_from_us,   9) \
-X(a, STATIC,   SINGULAR, BOOL,     only_leap_switch_messages,  10)
+X(a, STATIC,   SINGULAR, BOOL,     only_leap_switch_messages,  10) \
+X(a, STATIC,   SINGULAR, UINT32,   nodeinfo_channel,  11)
 #define meshtastic_DestinationsConfig_CALLBACK NULL
 #define meshtastic_DestinationsConfig_DEFAULT NULL
 #define meshtastic_DestinationsConfig_destinations_MSGTYPE meshtastic_DestinationsConfig_MeshDestination
@@ -127,7 +132,7 @@ extern const pb_msgdesc_t meshtastic_DestinationsConfig_MeshDestination_msg;
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_MAX_SIZE meshtastic_DestinationsConfig_size
 #define meshtastic_DestinationsConfig_MeshDestination_size 33
-#define meshtastic_DestinationsConfig_size       315
+#define meshtastic_DestinationsConfig_size       318
 
 #ifdef __cplusplus
 } /* extern "C" */
