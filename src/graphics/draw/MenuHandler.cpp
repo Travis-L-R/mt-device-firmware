@@ -514,7 +514,7 @@ void menuHandler::homeBaseMenu()
             }
             saveUIConfig();
 #elif defined(PCA_PIN_EINK_EN)
-            if (uiconfig.screen_brightness == 1) {
+            if (uiconfig.screen_brightness > 0) {
                 uiconfig.screen_brightness = 0;
                 io.digitalWrite(PCA_PIN_EINK_EN, LOW);
             } else {
@@ -783,6 +783,7 @@ void menuHandler::nodeNameLengthMenu()
             screen->runNow();
         }
     };
+    bannerOptions.InitialSelected = config.display.use_long_node_name == true ? 1 : 2;
     screen->showOverlayBanner(bannerOptions);
 }
 
