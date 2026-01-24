@@ -31,6 +31,9 @@ const char *DisplayFormatters::getModemPresetDisplayName(meshtastic_LoRaConfig_M
     case meshtastic_LoRaConfig_ModemPreset_LONG_FAST:
         return useShortName ? "LongF" : "LongFast";
         break;
+    case meshtastic_LoRaConfig_ModemPreset_LONG_TURBO:
+        return useShortName ? "LongT" : "LongTurbo";
+        break;
     case meshtastic_LoRaConfig_ModemPreset_LONG_MODERATE:
         return useShortName ? "LongM" : "LongMod";
         break;

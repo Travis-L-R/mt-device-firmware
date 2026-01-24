@@ -97,7 +97,8 @@ typedef struct _meshtastic_NodeInfoLite {
     /* Last byte of the node number of the node that should be used as the next hop to reach this node. */
     uint8_t next_hop;
     /* Bitfield for storing booleans.
- LSB 0 is_key_manually_verified */
+ LSB 0 is_key_manually_verified
+ LSB 1 is_muted */
     uint32_t bitfield;
 } meshtastic_NodeInfoLite;
 

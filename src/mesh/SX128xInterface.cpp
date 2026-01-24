@@ -155,7 +155,7 @@ template <typename T> bool SX128xInterface<T>::reconfigure(meshtastic_LoRaConfig
     return RADIOLIB_ERR_NONE;
 }
 
-template <typename T> void INTERRUPT_ATTR SX128xInterface<T>::disableInterrupt()
+template <typename T> void SX128xInterface<T>::disableInterrupt()
 {
     lora.clearDio1Action();
 }
