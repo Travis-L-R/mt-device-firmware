@@ -72,7 +72,8 @@ typedef enum _meshtastic_LoRaConfig_RegionCode {
 typedef enum _meshtastic_LoRaConfig_ModemPreset {
     /* Long Range - Fast */
     meshtastic_LoRaConfig_ModemPreset_LONG_FAST = 0,
-    /* Long Range - Slow */
+    /* Long Range - Slow
+ Deprecated in 2.7: Unpopular slow preset. */
     meshtastic_LoRaConfig_ModemPreset_LONG_SLOW = 1,
     /* Very Long Range - Slow
  Deprecated in 2.5: Works only with txco and is unusably slow */
@@ -91,8 +92,9 @@ typedef enum _meshtastic_LoRaConfig_ModemPreset {
  This is the fastest preset and the only one with 500kHz bandwidth.
  It is not legal to use in all regions due to this wider bandwidth. */
     meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO = 8,
-    /* Used in LoRaConfigLite to signify modem settings that don't use a preset */
-    meshtastic_LoRaConfig_ModemPreset_NO_PRESET = 255
+    /* Long Range - Turbo
+ This preset performs similarly to LongFast, but with 500Khz bandwidth. */
+    meshtastic_LoRaConfig_ModemPreset_LONG_TURBO = 9
 } meshtastic_LoRaConfig_ModemPreset;
 
 /* Struct definitions */
@@ -141,9 +143,7 @@ typedef struct _meshtastic_LoRaConfig {
  If ZERO then the rule is "use the old channel name hash based
  algorithm to derive the channel number")
  If using the hash algorithm the channel number will be: hash(channel_name) %
- NUM_CHANNELS (Where num channels depends on the regulatory region).
-
- 65535 is treated as "unset" for some purposes */
+ NUM_CHANNELS (Where num channels depends on the regulatory region). */
     uint16_t channel_num;
     /* If true, duty cycle limits will be exceeded and thus you're possibly not following
  the local regulations if you're not a HAM.
@@ -190,8 +190,8 @@ extern "C" {
 #define _meshtastic_LoRaConfig_RegionCode_ARRAYSIZE ((meshtastic_LoRaConfig_RegionCode)(meshtastic_LoRaConfig_RegionCode_BR_902+1))
 
 #define _meshtastic_LoRaConfig_ModemPreset_MIN meshtastic_LoRaConfig_ModemPreset_LONG_FAST
-#define _meshtastic_LoRaConfig_ModemPreset_MAX meshtastic_LoRaConfig_ModemPreset_NO_PRESET
-#define _meshtastic_LoRaConfig_ModemPreset_ARRAYSIZE ((meshtastic_LoRaConfig_ModemPreset)(meshtastic_LoRaConfig_ModemPreset_NO_PRESET+1))
+#define _meshtastic_LoRaConfig_ModemPreset_MAX meshtastic_LoRaConfig_ModemPreset_LONG_TURBO
+#define _meshtastic_LoRaConfig_ModemPreset_ARRAYSIZE ((meshtastic_LoRaConfig_ModemPreset)(meshtastic_LoRaConfig_ModemPreset_LONG_TURBO+1))
 
 #define meshtastic_LoRaConfig_modem_preset_ENUMTYPE meshtastic_LoRaConfig_ModemPreset
 #define meshtastic_LoRaConfig_region_ENUMTYPE meshtastic_LoRaConfig_RegionCode
@@ -265,8 +265,8 @@ extern const pb_msgdesc_t meshtastic_LoRaConfigLite_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_LORA_CONFIG_PB_H_MAX_SIZE meshtastic_LoRaConfig_size
-#define meshtastic_LoRaConfigLite_size           7
-#define meshtastic_LoRaConfig_size               86
+#define meshtastic_LoRaConfigLite_size           6
+#define meshtastic_LoRaConfig_size               85
 
 #ifdef __cplusplus
 } /* extern "C" */

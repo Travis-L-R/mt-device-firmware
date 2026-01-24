@@ -288,6 +288,18 @@ typedef enum _meshtastic_HardwareModel {
     meshtastic_HardwareModel_WISMESH_TAP_V2 = 116,
     /* RAK3401 */
     meshtastic_HardwareModel_RAK3401 = 117,
+    /* RAK6421 Hat+ */
+    meshtastic_HardwareModel_RAK6421 = 118,
+    /* Elecrow ThinkNode M4 */
+    meshtastic_HardwareModel_THINKNODE_M4 = 119,
+    /* Elecrow ThinkNode M6 */
+    meshtastic_HardwareModel_THINKNODE_M6 = 120,
+    /* Elecrow Meshstick 1262 */
+    meshtastic_HardwareModel_MESHSTICK_1262 = 121,
+    /* LilyGo T-Beam 1W */
+    meshtastic_HardwareModel_TBEAM_1_WATT = 122,
+    /* LilyGo T5 S3 ePaper Pro (V1 and V2) */
+    meshtastic_HardwareModel_T5_S3_EPAPER_PRO = 123,
     /* ------------------------------------------------------------------------------------------------------------------------------------------
  Reserved ID For developing private Ports. These will show up in live traffic sparsely, so we can use a high number. Keep it within 8 bits.
  ------------------------------------------------------------------------------------------------------------------------------------------ */
@@ -1176,7 +1188,11 @@ typedef struct _meshtastic_MeshPacket {
  Note: Our crypto implementation uses this field as well.
  See [crypto](/docs/overview/encryption) for details. */
     uint32_t from;
-    /* The (immediate) destination for this packet */
+    /* The (immediate) destination for this packet
+ If the value is 4,294,967,295 (maximum value of an unsigned 32bit integer), this indicates that the packet was
+ not destined for a specific node, but for a channel as indicated by the value of `channel` below.
+ If the value is another, this indicates that the packet was destined for a specific
+ node (i.e. a kind of "Direct Message" to this node) and not broadcast on a channel. */
     uint32_t to;
     /* (Usually) If set, this indicates the index in the secondary_channels table that this packet was sent/received on.
  If unset, packet was on the primary channel.
