@@ -131,8 +131,8 @@ extern const pb_msgdesc_t meshtastic_DestinationsConfig_MeshDestination_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_DESTINATIONS_PB_H_MAX_SIZE meshtastic_DestinationsConfig_size
-#define meshtastic_DestinationsConfig_MeshDestination_size 32
-#define meshtastic_DestinationsConfig_size       310
+#define meshtastic_DestinationsConfig_MeshDestination_size 33
+#define meshtastic_DestinationsConfig_size       318
 
 #ifdef __cplusplus
 } /* extern "C" */

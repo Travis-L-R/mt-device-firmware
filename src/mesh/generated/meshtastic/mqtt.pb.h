@@ -127,7 +127,7 @@ extern const pb_msgdesc_t meshtastic_MapReport_msg;
 /* Maximum encoded size of messages (where known) */
 /* meshtastic_ServiceEnvelope_size depends on runtime parameters */
 #define MESHTASTIC_MESHTASTIC_MQTT_PB_H_MAX_SIZE meshtastic_MapReport_size
-#define meshtastic_MapReport_size                110
+#define meshtastic_MapReport_size                111
 
 #ifdef __cplusplus
 } /* extern "C" */

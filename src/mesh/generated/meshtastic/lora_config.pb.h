@@ -94,7 +94,9 @@ typedef enum _meshtastic_LoRaConfig_ModemPreset {
     meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO = 8,
     /* Long Range - Turbo
  This preset performs similarly to LongFast, but with 500Khz bandwidth. */
-    meshtastic_LoRaConfig_ModemPreset_LONG_TURBO = 9
+    meshtastic_LoRaConfig_ModemPreset_LONG_TURBO = 9,
+    /* Signifier for the absence of a preset */
+    meshtastic_LoRaConfig_ModemPreset_NO_PRESET = 255
 } meshtastic_LoRaConfig_ModemPreset;
 
 /* Struct definitions */
@@ -190,8 +192,8 @@ extern "C" {
 #define _meshtastic_LoRaConfig_RegionCode_ARRAYSIZE ((meshtastic_LoRaConfig_RegionCode)(meshtastic_LoRaConfig_RegionCode_BR_902+1))
 
 #define _meshtastic_LoRaConfig_ModemPreset_MIN meshtastic_LoRaConfig_ModemPreset_LONG_FAST
-#define _meshtastic_LoRaConfig_ModemPreset_MAX meshtastic_LoRaConfig_ModemPreset_LONG_TURBO
-#define _meshtastic_LoRaConfig_ModemPreset_ARRAYSIZE ((meshtastic_LoRaConfig_ModemPreset)(meshtastic_LoRaConfig_ModemPreset_LONG_TURBO+1))
+#define _meshtastic_LoRaConfig_ModemPreset_MAX meshtastic_LoRaConfig_ModemPreset_NO_PRESET
+#define _meshtastic_LoRaConfig_ModemPreset_ARRAYSIZE ((meshtastic_LoRaConfig_ModemPreset)(meshtastic_LoRaConfig_ModemPreset_NO_PRESET+1))
 
 #define meshtastic_LoRaConfig_modem_preset_ENUMTYPE meshtastic_LoRaConfig_ModemPreset
 #define meshtastic_LoRaConfig_region_ENUMTYPE meshtastic_LoRaConfig_RegionCode
@@ -265,8 +267,8 @@ extern const pb_msgdesc_t meshtastic_LoRaConfigLite_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_LORA_CONFIG_PB_H_MAX_SIZE meshtastic_LoRaConfig_size
-#define meshtastic_LoRaConfigLite_size           6
-#define meshtastic_LoRaConfig_size               85
+#define meshtastic_LoRaConfigLite_size           7
+#define meshtastic_LoRaConfig_size               86
 
 #ifdef __cplusplus
 } /* extern "C" */
