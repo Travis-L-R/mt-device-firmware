@@ -265,7 +265,7 @@ void menuHandler::FrequencySlotPicker()
     optionsEnumArray[options++] = 0;
 
     // Calculate number of channels (copied from RadioInterface::applyModemConfig())
-    meshtastic_Config_LoRaConfig &loraConfig = config.lora;
+    meshtastic_LoRaConfig &loraConfig = config.lora;
     double bw = loraConfig.bandwidth;
     if (loraConfig.use_preset) {
         switch (loraConfig.modem_preset) {
