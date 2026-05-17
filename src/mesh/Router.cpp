@@ -4,10 +4,10 @@
 #include "MeshRadio.h"
 #include "MeshService.h"
 #include "NodeDB.h"
+#include "PositionPrecision.h"
 #include "RTC.h"
 
 #include "configuration.h"
-#include "detect/LoRaRadioType.h"
 #include "main.h"
 #include "mesh-pb-constants.h"
 #include "meshUtils.h"
@@ -17,6 +17,7 @@
 #endif
 #include "Default.h"
 #if ARCH_PORTDUINO
+#include "Throttle.h"
 #include "platform/portduino/PortduinoGlue.h"
 #endif
 #if ENABLE_JSON_LOGGING || ARCH_PORTDUINO
@@ -309,6 +310,13 @@ ErrorCode Router::sendLocal(meshtastic_MeshPacket *p, RxSource src)
                 p->channel = node->channel;
                 LOG_DEBUG("localSend to channel %d", p->channel);
             }
+        }
+
+        // If someone asks for acks on broadcast, we need the hop limit to be at least one, so that first node that receives our
+        // message will rebroadcast.  But asking for hop_limit 0 in that context means the client app has no preference on hop
+        // counts and we want this message to get through the whole mesh, so use the default.
+        if (src == RX_SRC_USER && p->want_ack && p->hop_limit == 0) {
+            p->hop_limit = Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit);
         }
 
         return send(p);
@@ -634,6 +642,11 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     }
 
     fixPriority(p); // Before encryption, fix the priority if it's unset
+    if (!applyPositionPrecisionForChannel(*p, p->channel)) {
+        LOG_ERROR("Dropping malformed position packet before send");
+        packetPool.release(p);
+        return meshtastic_Routing_Error_BAD_REQUEST;
+    }
 
     // If the packet is not yet encrypted, do so now
     if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
@@ -817,6 +830,25 @@ DecodeState perhapsDecode(meshtastic_MeshPacket *p)
         if (portduino_config.traceFilename != "" || portduino_config.logoutputlevel == level_trace) {
             LOG_TRACE("%s", MeshPacketSerializer::JsonSerialize(p, false).c_str());
         } else if (portduino_config.JSONFilename != "") {
+            if (portduino_config.JSONFileRotate != 0) {
+                static uint32_t fileage = 0;
+
+                if (portduino_config.JSONFileRotate != 0 &&
+                    (fileage == 0 || !Throttle::isWithinTimespanMs(fileage, portduino_config.JSONFileRotate * 60 * 1000))) {
+                    time_t timestamp = time(NULL);
+                    struct tm *timeinfo;
+                    char buffer[80];
+                    timeinfo = localtime(&timestamp);
+                    strftime(buffer, 80, "%Y%m%d-%H%M%S", timeinfo);
+
+                    std::string datetime(buffer);
+                    if (JSONFile.is_open()) {
+                        JSONFile.close();
+                    }
+                    JSONFile.open(portduino_config.JSONFilename + "_" + datetime, std::ios::out | std::ios::app);
+                    fileage = millis();
+                }
+            }
             if (portduino_config.JSONFilter == (_meshtastic_PortNum)0 || portduino_config.JSONFilter == p->decoded.portnum) {
                 JSONFile << MeshPacketSerializer::JsonSerialize(p, false) << std::endl;
             }
@@ -914,9 +946,7 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
             !(p->pki_encrypted != true && (strcasecmp(channels.getName(chIndex), Channels::serialChannel) == 0 ||
                                            strcasecmp(channels.getName(chIndex), Channels::gpioChannel) == 0)) &&
             // Check for valid keys and single node destination
-            config.security.private_key.size == 32 && !isBroadcast(p->to) && node != nullptr &&
-            // Check for a known public key for the destination
-            (node->user.public_key.size == 32) &&
+            config.security.private_key.size == 32 && !isBroadcast(p->to) &&
             // Some portnums either make no sense to send with PKC
             p->decoded.portnum != meshtastic_PortNum_TRACEROUTE_APP && p->decoded.portnum != meshtastic_PortNum_NODEINFO_APP &&
             p->decoded.portnum != meshtastic_PortNum_ROUTING_APP && p->decoded.portnum != meshtastic_PortNum_POSITION_APP) {
@@ -931,6 +961,12 @@ meshtastic_Routing_Error perhapsEncode(meshtastic_MeshPacket *p)
 
             if (numbytes + MESHTASTIC_HEADER_LENGTH + MESHTASTIC_PKC_OVERHEAD > MAX_LORA_PAYLOAD_LEN)
                 return meshtastic_Routing_Error_TOO_LARGE;
+            // Check for a known public key for the destination
+            if (node == nullptr || node->user.public_key.size != 32) {
+                LOG_WARN("Unknown public key for destination node 0x%08x (portnum %d), refusing to send legacy DM", p->to,
+                         p->decoded.portnum);
+                return meshtastic_Routing_Error_PKI_SEND_FAIL_PUBLIC_KEY;
+            }
             if (p->pki_encrypted && !memfll(p->public_key.bytes, 0, 32) &&
                 memcmp(p->public_key.bytes, node->user.public_key.bytes, 32) != 0) {
                 LOG_WARN("Client public key differs from requested: 0x%02x, stored key begins 0x%02x", *p->public_key.bytes,
@@ -1055,9 +1091,13 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
     // Also, we should set the time from the ISR and it should have msec level resolution
     p->rx_time = getValidTime(RTCQualityFromNet); // store the arrival timestamp for the phone
 
-    // Store a copy of encrypted packet for MQTT
+    // Store a copy of the encrypted packet for MQTT.
+    // Local, not a class member: handleReceived re-enters itself when a module
+    // reply broadcast goes through MeshService::sendToMesh -> Router::sendLocal,
+    // and a member would be silently overwritten without release on the inner
+    // call. Each invocation now owns its own copy (issue #9632, #10101, #8729).
     DEBUG_HEAP_BEFORE;
-    p_encrypted = packetPool.allocCopy(*p);
+    meshtastic_MeshPacket *p_encrypted = packetPool.allocCopy(*p);
     DEBUG_HEAP_AFTER("Router::handleReceived", p_encrypted);
 
     // Take those raw bytes and convert them back into a well structured protobuf we can understand
@@ -1136,13 +1176,37 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
                 p_encrypted->pki_encrypted = true;
             // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
 #if !USERPREFS_UPLINK_ALL_PACKETS
-        if ((decodedState == DecodeState::DECODE_SUCCESS || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled &&
-            !isFromUs(p) && mqtt)
+            if ((decodedState == DecodeState::DECODE_SUCCESS || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled &&
+                !isFromUs(p) && mqtt) {
 #else
-        if ((decodedState == DecodeState::DECODE_SUCCESS || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled &&
-            !isFromUs(p) && mqtt)
+            if ((decodedState == DecodeState::DECODE_SUCCESS || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled &&
+               !isFromUs(p) && mqtt) {
 #endif
+                if (decodedState == DecodeState::DECODE_SUCCESS && p->decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP &&
+                    moduleConfig.mqtt.encryption_enabled) {
+                    // For TRACEROUTE_APP packets release the original encrypted packet and encrypt a new from the changed packet
+                    // Only release the original after successful allocation to avoid losing an incomplete but valid packet
+                    auto *p_encrypted_new = packetPool.allocCopy(*p);
+                    if (p_encrypted_new) {
+                        auto encodeResult = perhapsEncode(p_encrypted_new);
+                        if (encodeResult != meshtastic_Routing_Error_NONE) {
+                            // Encryption failed, release the new packet and fall back to sending the original encrypted packet to
+                            // MQTT
+                            LOG_WARN("Encryption of new TR packet failed, sending original TR to MQTT");
+                            packetPool.release(p_encrypted_new);
+                            p_encrypted_new = nullptr;
+                        } else {
+                            // Successfully re-encrypted, release the original encrypted packet and use the new one for MQTT
+                            packetPool.release(p_encrypted);
+                            p_encrypted = p_encrypted_new;
+                        }
+                    } else {
+                        // Allocation failed, log a warning and fall back to sending the original encrypted packet to MQTT
+                        LOG_WARN("Failed to allocate new encrypted packet for TR, sending original TR to MQTT");
+                    }
+                }
                 mqtt->onSend(*p_encrypted, *p, p->channel);
+            }
         }
 #endif
     } else if (p->from == nodeDB->getNodeNum() && !skipHandle) {
@@ -1155,8 +1219,7 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 #endif
     }
 
-    packetPool.release(p_encrypted); // Release the encrypted packet
-    p_encrypted = nullptr;
+    packetPool.release(p_encrypted); // Release the encrypted packet (release() handles nullptr)
 }
 
 void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)

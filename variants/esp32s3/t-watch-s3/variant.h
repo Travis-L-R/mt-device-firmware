@@ -39,13 +39,12 @@
 #define DAC_I2S_BCK 48
 #define DAC_I2S_WS 15
 #define DAC_I2S_DOUT 46
-#define DAC_I2S_MCLK 0
+#define DAC_I2S_MCLK -1
 
 #define HAS_AXP2101
 
 // PCF8563 RTC Module
 #define PCF8563_RTC 0x51
-#define HAS_RTC 1
 
 #define I2C_SDA 10 // For QMC6310 sensors and screens
 #define I2C_SCL 11 // For QMC6310 sensors and screens

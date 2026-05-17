@@ -17,3 +17,5 @@ PB_BIND(meshtastic_LoRaConfigLite, meshtastic_LoRaConfigLite, AUTO)
 
 
 
+
+
