@@ -38,7 +38,7 @@ class Router : protected concurrency::OSThread, protected PacketHistory
     /**
      * Getter method for the interface currently in use
      */
-    RadioInterface *getInterface() { return iface; }
+    RadioInterface *getInterface() { return iface.get(); }
 
     /**
      * do idle processing
