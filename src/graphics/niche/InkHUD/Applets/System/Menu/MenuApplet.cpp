@@ -167,7 +167,7 @@ int32_t InkHUD::MenuApplet::runOnce()
     return OSThread::disable();
 }
 
-static void applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode region)
+static void applyLoRaRegion(meshtastic_LoRaConfig_RegionCode region)
 {
     if (config.lora.region == region)
         return;
@@ -234,7 +234,7 @@ static void applyDeviceRole(meshtastic_Config_DeviceConfig_Role role)
     rebootAtMsec = millis() + DEFAULT_REBOOT_SECONDS * 1000;
 }
 
-static void applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset preset)
+static void applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset preset)
 {
     if (config.lora.modem_preset == preset)
         return;
@@ -573,106 +573,106 @@ void InkHUD::MenuApplet::execute(MenuItem item)
 
     // Regions
     case SET_REGION_US:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_US);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_US);
         break;
 
     case SET_REGION_EU_868:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_EU_868);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_EU_868);
         break;
 
     case SET_REGION_EU_433:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_EU_433);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_EU_433);
         break;
 
     case SET_REGION_CN:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_CN);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_CN);
         break;
 
     case SET_REGION_JP:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_JP);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_JP);
         break;
 
     case SET_REGION_ANZ:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_ANZ);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_ANZ);
         break;
     case SET_REGION_KR:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_KR);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_KR);
         break;
 
     case SET_REGION_TW:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_TW);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_TW);
         break;
 
     case SET_REGION_RU:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_RU);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_RU);
         break;
 
     case SET_REGION_IN:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_IN);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_IN);
         break;
 
     case SET_REGION_NZ_865:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_NZ_865);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_NZ_865);
         break;
 
     case SET_REGION_TH:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_TH);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_TH);
         break;
 
     case SET_REGION_LORA_24:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_LORA_24);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_LORA_24);
         break;
 
     case SET_REGION_UA_433:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_UA_433);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_UA_433);
         break;
 
     case SET_REGION_UA_868:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_UA_868);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_UA_868);
         break;
 
     case SET_REGION_MY_433:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_MY_433);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_MY_433);
         break;
 
     case SET_REGION_MY_919:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_MY_919);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_MY_919);
         break;
 
     case SET_REGION_SG_923:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_SG_923);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_SG_923);
         break;
 
     case SET_REGION_PH_433:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_PH_433);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_PH_433);
         break;
 
     case SET_REGION_PH_868:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_PH_868);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_PH_868);
         break;
 
     case SET_REGION_PH_915:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_PH_915);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_PH_915);
         break;
 
     case SET_REGION_ANZ_433:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_ANZ_433);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_ANZ_433);
         break;
 
     case SET_REGION_KZ_433:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_KZ_433);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_KZ_433);
         break;
 
     case SET_REGION_KZ_863:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_KZ_863);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_KZ_863);
         break;
 
     case SET_REGION_NP_865:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_NP_865);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_NP_865);
         break;
 
     case SET_REGION_BR_902:
-        applyLoRaRegion(meshtastic_Config_LoRaConfig_RegionCode_BR_902);
+        applyLoRaRegion(meshtastic_LoRaConfig_RegionCode_BR_902);
         break;
 
     // Roles
@@ -694,35 +694,35 @@ void InkHUD::MenuApplet::execute(MenuItem item)
 
     // Presets
     case SET_PRESET_LONG_SLOW:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_LONG_SLOW);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_LONG_SLOW);
         break;
 
     case SET_PRESET_LONG_MODERATE:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_LONG_MODERATE);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_LONG_MODERATE);
         break;
 
     case SET_PRESET_LONG_FAST:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_LONG_FAST);
         break;
 
     case SET_PRESET_MEDIUM_SLOW:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_SLOW);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_MEDIUM_SLOW);
         break;
 
     case SET_PRESET_MEDIUM_FAST:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST);
         break;
 
     case SET_PRESET_SHORT_SLOW:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_SHORT_SLOW);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_SHORT_SLOW);
         break;
 
     case SET_PRESET_SHORT_FAST:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_SHORT_FAST);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_SHORT_FAST);
         break;
 
     case SET_PRESET_SHORT_TURBO:
-        applyLoRaPreset(meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO);
+        applyLoRaPreset(meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO);
         break;
 
     // Timezones

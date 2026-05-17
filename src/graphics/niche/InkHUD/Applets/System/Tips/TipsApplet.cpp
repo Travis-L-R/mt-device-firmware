@@ -70,7 +70,7 @@ void InkHUD::TipsApplet::onRender(bool full)
         drawBullet("- connect antenna");
         drawBullet("- connect a client app");
 
-        if (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET)
+        if (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET)
             drawBullet("- set region");
 
         if (!(*config.device.tzdef && config.device.tzdef[0] != 0))
@@ -272,7 +272,7 @@ void InkHUD::TipsApplet::onBackground()
 // While our SystemApplet::handleInput flag is true
 void InkHUD::TipsApplet::onButtonShortPress()
 {
-    bool needsRegion = (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_UNSET);
+    bool needsRegion = (config.lora.region == meshtastic_LoRaConfig_RegionCode_UNSET);
     // If we're prompting the user to pick a region, hand off to the menu
     if (!tipQueue.empty() && tipQueue.front() == Tip::PICK_REGION) {
         tipQueue.pop_front();

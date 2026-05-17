@@ -18,7 +18,7 @@ from meshtastic_mcp import userprefs
 def sample_jsonc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Write a minimal userPrefs.jsonc into tmp_path and point config at it."""
     content = """{
-  "USERPREFS_CONFIG_LORA_REGION": "meshtastic_Config_LoRaConfig_RegionCode_US",
+  "USERPREFS_CONFIG_LORA_REGION": "meshtastic_LoRaConfig_RegionCode_US",
   "USERPREFS_LORACONFIG_CHANNEL_NUM": "88",
   // "USERPREFS_CHANNEL_0_NAME": "McpTest",
   "USERPREFS_CHANNEL_0_PSK": "{ 0x01, 0x02, 0x03 }",

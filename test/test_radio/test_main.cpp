@@ -23,10 +23,10 @@ static void test_bwCodeToKHz_passthrough()
 
 static void test_bootstrapLoRaConfigFromPreset_noopWhenUsePresetFalse()
 {
-    meshtastic_Config_LoRaConfig cfg = meshtastic_Config_LoRaConfig_init_zero;
+    meshtastic_LoRaConfig cfg = meshtastic_LoRaConfig_init_zero;
     cfg.use_preset = false;
-    cfg.region = meshtastic_Config_LoRaConfig_RegionCode_US;
-    cfg.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST;
+    cfg.region = meshtastic_LoRaConfig_RegionCode_US;
+    cfg.modem_preset = meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST;
     cfg.bandwidth = 123;
     cfg.spread_factor = 8;
 
@@ -34,15 +34,15 @@ static void test_bootstrapLoRaConfigFromPreset_noopWhenUsePresetFalse()
 
     TEST_ASSERT_EQUAL_UINT16(123, cfg.bandwidth);
     TEST_ASSERT_EQUAL_UINT32(8, cfg.spread_factor);
-    TEST_ASSERT_EQUAL(meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST, cfg.modem_preset);
+    TEST_ASSERT_EQUAL(meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST, cfg.modem_preset);
 }
 
 static void test_bootstrapLoRaConfigFromPreset_setsDerivedFields_nonWideRegion()
 {
-    meshtastic_Config_LoRaConfig cfg = meshtastic_Config_LoRaConfig_init_zero;
+    meshtastic_LoRaConfig cfg = meshtastic_LoRaConfig_init_zero;
     cfg.use_preset = true;
-    cfg.region = meshtastic_Config_LoRaConfig_RegionCode_US;
-    cfg.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST;
+    cfg.region = meshtastic_LoRaConfig_RegionCode_US;
+    cfg.modem_preset = meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST;
 
     RadioInterface::bootstrapLoRaConfigFromPreset(cfg);
 
@@ -52,10 +52,10 @@ static void test_bootstrapLoRaConfigFromPreset_setsDerivedFields_nonWideRegion()
 
 static void test_bootstrapLoRaConfigFromPreset_setsDerivedFields_wideRegion()
 {
-    meshtastic_Config_LoRaConfig cfg = meshtastic_Config_LoRaConfig_init_zero;
+    meshtastic_LoRaConfig cfg = meshtastic_LoRaConfig_init_zero;
     cfg.use_preset = true;
-    cfg.region = meshtastic_Config_LoRaConfig_RegionCode_LORA_24;
-    cfg.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST;
+    cfg.region = meshtastic_LoRaConfig_RegionCode_LORA_24;
+    cfg.modem_preset = meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST;
 
     RadioInterface::bootstrapLoRaConfigFromPreset(cfg);
 
@@ -65,14 +65,14 @@ static void test_bootstrapLoRaConfigFromPreset_setsDerivedFields_wideRegion()
 
 static void test_bootstrapLoRaConfigFromPreset_fallsBackIfBandwidthExceedsRegionSpan()
 {
-    meshtastic_Config_LoRaConfig cfg = meshtastic_Config_LoRaConfig_init_zero;
+    meshtastic_LoRaConfig cfg = meshtastic_LoRaConfig_init_zero;
     cfg.use_preset = true;
-    cfg.region = meshtastic_Config_LoRaConfig_RegionCode_EU_868;
-    cfg.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO;
+    cfg.region = meshtastic_LoRaConfig_RegionCode_EU_868;
+    cfg.modem_preset = meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO;
 
     RadioInterface::bootstrapLoRaConfigFromPreset(cfg);
 
-    TEST_ASSERT_EQUAL(meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST, cfg.modem_preset);
+    TEST_ASSERT_EQUAL(meshtastic_LoRaConfig_ModemPreset_LONG_FAST, cfg.modem_preset);
     TEST_ASSERT_EQUAL_UINT16(250, cfg.bandwidth);
     TEST_ASSERT_EQUAL_UINT32(11, cfg.spread_factor);
 }

@@ -348,18 +348,18 @@ void UIRenderer::drawNodeInfo(OLEDDisplay *display, OLEDDisplayUiState *state, i
     int bars = 0;
 
     // Helper to get SNR limit based on modem preset
-    auto getSnrLimit = [](meshtastic_Config_LoRaConfig_ModemPreset preset) -> float {
+    auto getSnrLimit = [](meshtastic_LoRaConfig_ModemPreset preset) -> float {
         switch (preset) {
-        case meshtastic_Config_LoRaConfig_ModemPreset_LONG_SLOW:
-        case meshtastic_Config_LoRaConfig_ModemPreset_LONG_MODERATE:
-        case meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST:
+        case meshtastic_LoRaConfig_ModemPreset_LONG_SLOW:
+        case meshtastic_LoRaConfig_ModemPreset_LONG_MODERATE:
+        case meshtastic_LoRaConfig_ModemPreset_LONG_FAST:
             return -6.0f;
-        case meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_SLOW:
-        case meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST:
+        case meshtastic_LoRaConfig_ModemPreset_MEDIUM_SLOW:
+        case meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST:
             return -5.5f;
-        case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_SLOW:
-        case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_FAST:
-        case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO:
+        case meshtastic_LoRaConfig_ModemPreset_SHORT_SLOW:
+        case meshtastic_LoRaConfig_ModemPreset_SHORT_FAST:
+        case meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO:
             return -4.5f;
         default:
             return -6.0f;

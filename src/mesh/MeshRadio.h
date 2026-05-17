@@ -10,12 +10,12 @@
 // than `constexpr` because the cast from 0xFF to the enum is out-of-range and
 // therefore not a valid constant expression on Clang 16+ (Apple Clang on
 // macOS). The value is only ever compared at runtime, so static-init is fine.
-static const meshtastic_Config_LoRaConfig_ModemPreset MODEM_PRESET_END =
-    static_cast<meshtastic_Config_LoRaConfig_ModemPreset>(0xFF);
+static const meshtastic_LoRaConfig_ModemPreset MODEM_PRESET_END =
+    static_cast<meshtastic_LoRaConfig_ModemPreset>(0xFF);
 
 // Region profile: bundles the preset list with regulatory parameters shared across regions
 struct RegionProfile {
-    const meshtastic_Config_LoRaConfig_ModemPreset *presets; // sentinel-terminated; first entry is the default
+    const meshtastic_LoRaConfig_ModemPreset *presets; // sentinel-terminated; first entry is the default
     float spacing;                                           // gaps between radio channels
     float padding;                                           // padding at each side of the "operating channel"
     bool audioPermitted;
@@ -129,46 +129,46 @@ static inline uint16_t bwKHzToCode(float bwKHz)
     return (uint16_t)(bwKHz + 0.5f);
 }
 
-static inline void modemPresetToParams(meshtastic_Config_LoRaConfig_ModemPreset preset, bool wideLora, float &bwKHz, uint8_t &sf,
+static inline void modemPresetToParams(meshtastic_LoRaConfig_ModemPreset preset, bool wideLora, float &bwKHz, uint8_t &sf,
                                        uint8_t &cr)
 {
     switch (preset) {
-    case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_TURBO:
+    case meshtastic_LoRaConfig_ModemPreset_SHORT_TURBO:
         bwKHz = wideLora ? 1625.0f : 500.0f;
         cr = 5;
         sf = 7;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_FAST:
+    case meshtastic_LoRaConfig_ModemPreset_SHORT_FAST:
         bwKHz = wideLora ? 812.5f : 250.0f;
         cr = 5;
         sf = 7;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_SHORT_SLOW:
+    case meshtastic_LoRaConfig_ModemPreset_SHORT_SLOW:
         bwKHz = wideLora ? 812.5f : 250.0f;
         cr = 5;
         sf = 8;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST:
+    case meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST:
         bwKHz = wideLora ? 812.5f : 250.0f;
         cr = 5;
         sf = 9;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_SLOW:
+    case meshtastic_LoRaConfig_ModemPreset_MEDIUM_SLOW:
         bwKHz = wideLora ? 812.5f : 250.0f;
         cr = 5;
         sf = 10;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_LONG_TURBO:
+    case meshtastic_LoRaConfig_ModemPreset_LONG_TURBO:
         bwKHz = wideLora ? 1625.0f : 500.0f;
         cr = 8;
         sf = 11;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_LONG_MODERATE:
+    case meshtastic_LoRaConfig_ModemPreset_LONG_MODERATE:
         bwKHz = wideLora ? 406.25f : 125.0f;
         cr = 8;
         sf = 11;
         break;
-    case meshtastic_Config_LoRaConfig_ModemPreset_LONG_SLOW:
+    case meshtastic_LoRaConfig_ModemPreset_LONG_SLOW:
         bwKHz = wideLora ? 406.25f : 125.0f;
         cr = 8;
         sf = 12;
@@ -181,7 +181,7 @@ static inline void modemPresetToParams(meshtastic_Config_LoRaConfig_ModemPreset 
     }
 }
 
-static inline float modemPresetToBwKHz(meshtastic_Config_LoRaConfig_ModemPreset preset, bool wideLora)
+static inline float modemPresetToBwKHz(meshtastic_LoRaConfig_ModemPreset preset, bool wideLora)
 {
     float bwKHz = 0;
     uint8_t sf = 0;

@@ -86,7 +86,7 @@ void test_client_medium_fast_preset_scaling()
 {
     config.device.role = meshtastic_Config_DeviceConfig_Role_CLIENT;
     config.lora.use_preset = true;
-    config.lora.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_FAST;
+    config.lora.modem_preset = meshtastic_LoRaConfig_ModemPreset_MEDIUM_FAST;
     // nodesOverForty = 30 -> test with nodes=70
     uint32_t res = Default::getConfiguredOrDefaultMsScaled(0, 60, 70);
     uint32_t expected = computeExpectedMs(60, 70);

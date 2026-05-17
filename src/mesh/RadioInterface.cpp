@@ -315,7 +315,7 @@ std::unique_ptr<RadioInterface> initLoRa()
 #endif
 
 #if defined(RF95_IRQ) && RADIOLIB_EXCLUDE_SX127X != 1
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = std::unique_ptr<RF95Interface>(new RF95Interface(loraHal, LORA_CS, RF95_IRQ, RF95_RESET, RF95_DIO1));
         if (!rIf->init()) {
             LOG_WARN("No RF95 radio");
@@ -328,7 +328,7 @@ std::unique_ptr<RadioInterface> initLoRa()
 #endif
 
 #if defined(USE_SX1262) && !defined(ARCH_PORTDUINO) && !defined(TCXO_OPTIONAL) && RADIOLIB_EXCLUDE_SX126X != 1
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         auto sxIf =
             std::unique_ptr<SX1262Interface>(new SX1262Interface(loraHal, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY));
 #ifdef SX126X_DIO3_TCXO_VOLTAGE
@@ -346,7 +346,7 @@ std::unique_ptr<RadioInterface> initLoRa()
 #endif
 
 #if defined(USE_SX1262) && !defined(ARCH_PORTDUINO) && defined(TCXO_OPTIONAL)
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         // try using the specified TCXO voltage
         auto sxIf =
             std::unique_ptr<SX1262Interface>(new SX1262Interface(loraHal, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY));
@@ -361,7 +361,7 @@ std::unique_ptr<RadioInterface> initLoRa()
         }
     }
 
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         // If specified TCXO voltage fails, attempt to use DIO3 as a reference instead
         rIf = std::unique_ptr<SX1262Interface>(new SX1262Interface(loraHal, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY));
         if (!rIf->init()) {
@@ -376,7 +376,7 @@ std::unique_ptr<RadioInterface> initLoRa()
 
 #if defined(USE_SX1268)
 #if defined(SX126X_DIO3_TCXO_VOLTAGE) && defined(TCXO_OPTIONAL)
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         // try using the specified TCXO voltage
         auto sxIf =
             std::unique_ptr<SX1268Interface>(new SX1268Interface(loraHal, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY));
@@ -391,7 +391,7 @@ std::unique_ptr<RadioInterface> initLoRa()
         }
     }
 #endif
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = std::unique_ptr<SX1268Interface>(new SX1268Interface(loraHal, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY));
         if (!rIf->init()) {
             LOG_WARN("No SX1268 radio");
@@ -404,7 +404,7 @@ std::unique_ptr<RadioInterface> initLoRa()
 #endif
 
 #if defined(USE_LLCC68)
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = std::unique_ptr<LLCC68Interface>(new LLCC68Interface(loraHal, SX126X_CS, SX126X_DIO1, SX126X_RESET, SX126X_BUSY));
         if (!rIf->init()) {
             LOG_WARN("No LLCC68 radio");
@@ -417,7 +417,7 @@ std::unique_ptr<RadioInterface> initLoRa()
 #endif
 
 #if defined(USE_LR1110) && RADIOLIB_EXCLUDE_LR11X0 != 1
-    if ((!rIf) && (config.lora.region != meshtastic_Config_LoRaConfig_RegionCode_LORA_24)) {
+    if ((!rIf) && (config.lora.region != meshtastic_LoRaConfig_RegionCode_LORA_24)) {
         rIf = std::unique_ptr<LR1110Interface>(
             new LR1110Interface(loraHal, LR1110_SPI_NSS_PIN, LR1110_IRQ_PIN, LR1110_NRESET_PIN, LR1110_BUSY_PIN));
         if (!rIf->init()) {
@@ -472,9 +472,9 @@ std::unique_ptr<RadioInterface> initLoRa()
 #endif
 
     // check if the radio chip matches the selected region
-    if ((config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_LORA_24) && rIf && (!rIf->wideLora())) {
+    if ((config.lora.region == meshtastic_LoRaConfig_RegionCode_LORA_24) && rIf && (!rIf->wideLora())) {
         LOG_WARN("LoRa chip does not support 2.4GHz. Revert to unset");
-        config.lora.region = meshtastic_Config_LoRaConfig_RegionCode_UNSET;
+        config.lora.region = meshtastic_LoRaConfig_RegionCode_UNSET;
         nodeDB->saveToDisk(SEGMENT_CONFIG);
 
         if (rIf && !rIf->reconfigure()) {
@@ -503,7 +503,7 @@ void initRegion()
     myRegion = r;
 }
 
-void RadioInterface::bootstrapLoRaConfigFromPreset(meshtastic_Config_LoRaConfig &loraConfig)
+void RadioInterface::bootstrapLoRaConfigFromPreset(meshtastic_LoRaConfig &loraConfig)
 {
     if (!loraConfig.use_preset) {
         return;
@@ -511,7 +511,7 @@ void RadioInterface::bootstrapLoRaConfigFromPreset(meshtastic_Config_LoRaConfig 
 
     // Find region info to determine whether "wide" LoRa is permitted (2.4 GHz uses wider bandwidth codes).
     const RegionInfo *r = regions;
-    for (; r->code != meshtastic_Config_LoRaConfig_RegionCode_UNSET && r->code != loraConfig.region; r++)
+    for (; r->code != meshtastic_LoRaConfig_RegionCode_UNSET && r->code != loraConfig.region; r++)
         ;
 
     const bool regionWideLora = r->wideLora;
@@ -522,8 +522,8 @@ void RadioInterface::bootstrapLoRaConfigFromPreset(meshtastic_Config_LoRaConfig 
     modemPresetToParams(loraConfig.modem_preset, regionWideLora, bwKHz, sf, cr);
 
     // If selected preset requests a bandwidth larger than the region span, fall back to LONG_FAST.
-    if (r->code != meshtastic_Config_LoRaConfig_RegionCode_UNSET && (r->freqEnd - r->freqStart) < (bwKHz / 1000.0f)) {
-        loraConfig.modem_preset = meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST;
+    if (r->code != meshtastic_LoRaConfig_RegionCode_UNSET && (r->freqEnd - r->freqStart) < (bwKHz / 1000.0f)) {
+        loraConfig.modem_preset = meshtastic_LoRaConfig_ModemPreset_LONG_FAST;
         modemPresetToParams(loraConfig.modem_preset, regionWideLora, bwKHz, sf, cr);
     }
 
