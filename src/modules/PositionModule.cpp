@@ -197,20 +197,12 @@ meshtastic_MeshPacket *PositionModule::allocPositionPacket()
 
     // lat/lon are unconditionally included - IF AVAILABLE!
     LOG_DEBUG("Send location with precision %i", precision);
+    p.latitude_i = localPosition.latitude_i;
+    p.longitude_i = localPosition.longitude_i;
+    p.has_latitude_i = true;
+    p.has_longitude_i = true;
+    applyPositionPrecision(p, precision);
 
-    // todo: rationalise / see if still need this due to change for applyPrecision
-    if (precision < 32 && precision > 0) {
-        p.latitude_i = localPosition.latitude_i & (UINT32_MAX << (32 - precision));
-        p.longitude_i = localPosition.longitude_i & (UINT32_MAX << (32 - precision));
-
-        // We want the imprecise position to be the middle of the possible location, not
-        p.latitude_i += (1 << (31 - precision));
-        p.longitude_i += (1 << (31 - precision));
-    } else {
-        p.latitude_i = localPosition.latitude_i;
-        p.longitude_i = localPosition.longitude_i;
-    }
-    p.precision_bits = precision;
 #if USERPREFS_APPLY_POSITION_MASKS
 
     uint32_t masked_lat;
@@ -224,8 +216,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_0_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_0_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_0_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_0_BITS));
         if (USERPREFS_POSITION_MASK_0_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_0_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_0_BITS;
         }
 #endif
@@ -233,8 +223,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_1_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_1_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_1_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_1_BITS));
         if (USERPREFS_POSITION_MASK_1_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_1_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_1_BITS;
         }
 #endif
@@ -242,8 +230,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_2_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_2_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_2_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_2_BITS));
         if (USERPREFS_POSITION_MASK_2_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_2_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_2_BITS;
         }
 #endif
@@ -251,8 +237,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_3_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_3_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_3_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_3_BITS));
         if (USERPREFS_POSITION_MASK_3_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_3_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_3_BITS;
         }
 #endif
@@ -260,8 +244,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_4_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_4_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_4_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_4_BITS));
         if (USERPREFS_POSITION_MASK_4_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_4_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_4_BITS;
         }
 #endif
@@ -269,8 +251,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_5_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_5_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_5_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_5_BITS));
         if (USERPREFS_POSITION_MASK_5_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_5_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_5_BITS;
         }
 #endif
@@ -278,8 +258,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_6_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_6_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_6_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_6_BITS));
         if (USERPREFS_POSITION_MASK_6_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_6_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_6_BITS;
         }
 #endif
@@ -287,8 +265,6 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_7_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_7_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_7_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_7_BITS));
         if (USERPREFS_POSITION_MASK_7_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_7_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_7_BITS;
         }
 #endif
@@ -296,26 +272,20 @@ if (USERPREFS_MASK_POS_EVEN_WHEN_PRECISE || precision != 32) {
         masked_lat = (int32_t)(USERPREFS_POSITION_MASK_8_LAT * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_8_BITS));
         masked_lon = (int32_t)(USERPREFS_POSITION_MASK_8_LON * 1e7) & (UINT32_MAX << (32 - USERPREFS_POSITION_MASK_8_BITS));
         if (USERPREFS_POSITION_MASK_8_BITS < precision && (p.latitude_i & masked_lat) == masked_lat && (p.longitude_i & masked_lon) == masked_lon) {
-            p.latitude_i = masked_lat;
-            p.longitude_i = masked_lon;
             lowest_precision = USERPREFS_POSITION_MASK_8_BITS > lowest_precision ? lowest_precision : USERPREFS_POSITION_MASK_8_BITS;
         }
 #endif
 
         // Reposition to center of smallest masked area if we adjusted it
         if (lowest_precision != UINT32_MAX) {
-            p.latitude_i += (1 << (31 - lowest_precision));
-            p.longitude_i += (1 << (31 - lowest_precision));
+            applyPositionPrecision(p, lowest_precision);
             p.precision_bits = lowest_precision;  // todo: rationalise thise and next
-            precision = lowest_precision;
+            LOG_INFO("Overrode lowest precision %i", lowest_precision);
         }
 
     }
 #endif
 
-    p.has_latitude_i = true;
-    p.has_longitude_i = true;
-    applyPositionPrecision(p, precision);
     // Always use NTP / GPS time if available
     if (getValidTime(RTCQualityNTP) > 0) {
         p.time = getValidTime(RTCQualityNTP);
