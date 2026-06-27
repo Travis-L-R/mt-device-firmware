@@ -845,11 +845,13 @@ void RadioInterface::applyModemConfig(meshtastic_LoRaConfigLite *c)
             // Set to default modem preset
             loraConfig.use_preset = true;
             loraConfig.modem_preset = meshtastic_LoRaConfig_ModemPreset_LONG_FAST;
-            saveModemPreset(loraConfig.modem_preset);
+            
         } else {
             validConfig = true;
         }
     }
+
+    saveModemPreset(loraConfig.modem_preset);
 
     power = loraConfig.tx_power;
 
