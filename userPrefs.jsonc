@@ -45,6 +45,9 @@
   // "USERPREFS_POSITION_MASK_8_LON": "123.4567890",
   // "USERPREFS_POSITION_MASK_8_BITS": "13",
 
+  // Option to always turn off start and shutdown melodies
+  "USERPREFS_DISABLE_MELODIES": "true",
+
   // "USERPREFS_BUTTON_PIN": "36",
   // "USERPREFS_CHANNELS_TO_WRITE": "3",
   // "USERPREFS_CHANNEL_0_DOWNLINK_ENABLED": "false",

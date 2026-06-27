@@ -794,7 +794,8 @@ void Power::shutdown()
 #endif
     }
 #endif
-#if !defined(ARCH_STM32WL)
+
+#if !defined(ARCH_STM32WL) && !USERPREFS_DISABLE_MELODIES
     playShutdownMelody();
 #endif
     nodeDB->saveToDisk();
