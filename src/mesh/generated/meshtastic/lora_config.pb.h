@@ -152,6 +152,10 @@ typedef enum _meshtastic_LoRaConfig_ModemPreset {
  Only compatible with SX127x and SX126x chipsets.
  Comparable link budget and data rate to LONG_MODERATE. */
     meshtastic_LoRaConfig_ModemPreset_TINY_SLOW = 15,
+    /* Medium Range - Turbo
+ This preset performs similarly to MEDIUM_FAST, but with 500kHz bandwidth.
+ It is not legal to use in all regions due to this wider bandwidth. */
+    meshtastic_LoRaConfig_ModemPreset_MEDIUM_TURBO = 16,
     /* Signifier for the absence of a preset */
     meshtastic_LoRaConfig_ModemPreset_NO_PRESET = 255
 } meshtastic_LoRaConfig_ModemPreset;
