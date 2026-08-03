@@ -47,7 +47,10 @@ typedef enum _meshtastic_AdminMessage_ConfigType {
     /* Session key config */
     meshtastic_AdminMessage_ConfigType_SESSIONKEY_CONFIG = 8,
     /* device-ui config */
-    meshtastic_AdminMessage_ConfigType_DEVICEUI_CONFIG = 9
+    meshtastic_AdminMessage_ConfigType_DEVICEUI_CONFIG = 9,
+    /* Destinations config
+ reserving 10,11,12 in case of upstream additions */
+    meshtastic_AdminMessage_ConfigType_DESTINATIONS_CONFIG = 13
 } meshtastic_AdminMessage_ConfigType;
 
 /* TODO: REPLACE */
@@ -186,7 +189,7 @@ typedef struct _meshtastic_LockdownAuth {
  token at unlock time: the client-supplied boots_remaining when
  non-zero, otherwise the firmware default (TOKEN_DEFAULT_BOOTS).
  Note that boots_remaining == 0 in this message means "use firmware
- default", NOT "zero boots" - a client computing the ceiling for
+ default", NOT "zero boots" — a client computing the ceiling for
  display should mirror that resolution rather than multiplying the
  raw request value.
 
@@ -196,7 +199,7 @@ typedef struct _meshtastic_LockdownAuth {
 
  Uses millis() (CPU uptime), not wall-clock time, so the cap is
  immune to GPS spoofing, RTC backup-battery removal, and Faraday
- cage isolation - none of those move the uptime counter. The only
+ cage isolation — none of those move the uptime counter. The only
  way to reset the session clock is a reboot, which costs a boot
  from the on-flash, HMAC-bound counter. */
     uint32_t max_session_seconds;
@@ -213,7 +216,7 @@ typedef struct _meshtastic_LockdownAuth {
 
  NOT reversed by this operation: APPROTECT. Once the debug port
  lockout has been burned (on silicon where it is effective) it is
- permanent - disabling lockdown decrypts your data and removes the
+ permanent — disabling lockdown decrypts your data and removes the
  access gates, but the SWD/JTAG port stays locked for the life of
  the device (recoverable only via a full chip erase over a debug
  probe, which destroys all data). Clients should make this
@@ -508,8 +511,8 @@ extern "C" {
 #define _meshtastic_OTAMode_ARRAYSIZE ((meshtastic_OTAMode)(meshtastic_OTAMode_OTA_WIFI+1))
 
 #define _meshtastic_AdminMessage_ConfigType_MIN meshtastic_AdminMessage_ConfigType_DEVICE_CONFIG
-#define _meshtastic_AdminMessage_ConfigType_MAX meshtastic_AdminMessage_ConfigType_DEVICEUI_CONFIG
-#define _meshtastic_AdminMessage_ConfigType_ARRAYSIZE ((meshtastic_AdminMessage_ConfigType)(meshtastic_AdminMessage_ConfigType_DEVICEUI_CONFIG+1))
+#define _meshtastic_AdminMessage_ConfigType_MAX meshtastic_AdminMessage_ConfigType_DESTINATIONS_CONFIG
+#define _meshtastic_AdminMessage_ConfigType_ARRAYSIZE ((meshtastic_AdminMessage_ConfigType)(meshtastic_AdminMessage_ConfigType_DESTINATIONS_CONFIG+1))
 
 #define _meshtastic_AdminMessage_ModuleConfigType_MIN meshtastic_AdminMessage_ModuleConfigType_MQTT_CONFIG
 #define _meshtastic_AdminMessage_ModuleConfigType_MAX meshtastic_AdminMessage_ModuleConfigType_MESHBEACON_CONFIG

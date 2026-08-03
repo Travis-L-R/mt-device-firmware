@@ -70,7 +70,11 @@ typedef enum _meshtastic_Config_DeviceConfig_Role {
  Technical Details: Used for stronger attic/roof nodes to distribute messages more widely
     from weaker, indoor, or less-well-positioned nodes. Recommended for users with multiple nodes
     where one CLIENT_BASE acts as a more powerful base station, such as an attic/roof node. */
-    meshtastic_Config_DeviceConfig_Role_CLIENT_BASE = 12
+    meshtastic_Config_DeviceConfig_Role_CLIENT_BASE = 12,
+    /* Description: Device that will wait until other nodes should have rebroadcast, and only rebroadcast if no one else has and channel utilization is low)
+ Technical Details: Intended for use when a node wouldn't normally be able to contribute helpfully to the mesh, but you still want it to be able to.
+ Reserving 13, 14 in case of upstream additions */
+    meshtastic_Config_DeviceConfig_Role_CLIENT_LATE = 15
 } meshtastic_Config_DeviceConfig_Role;
 
 /* Defines the device's behavior for how messages are rebroadcast */
@@ -378,7 +382,9 @@ typedef enum _meshtastic_Config_LoRaConfig_ModemPreset {
     /* Medium Range - Turbo
  This preset performs similarly to MEDIUM_FAST, but with 500kHz bandwidth.
  It is not legal to use in all regions due to this wider bandwidth. */
-    meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_TURBO = 16
+    meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_TURBO = 16,
+    /* Signifier for the absence of a preset */
+    meshtastic_Config_LoRaConfig_ModemPreset_NO_PRESET = 255
 } meshtastic_Config_LoRaConfig_ModemPreset;
 
 typedef enum _meshtastic_Config_LoRaConfig_FEM_LNA_Mode {
@@ -711,6 +717,68 @@ typedef struct _meshtastic_Config_SessionkeyConfig {
     char dummy_field;
 } meshtastic_Config_SessionkeyConfig;
 
+/* Simplified Lora Config for switching between presets */
+typedef struct _meshtastic_Config_LoRaConfigLite {
+    /* Modem preset to select */
+    meshtastic_Config_LoRaConfig_ModemPreset modem_preset;
+    /* LoRa frequency channel slot to use.
+ 65535 is treated as "unset" for some purposes. */
+    uint16_t channel_num;
+} meshtastic_Config_LoRaConfigLite;
+
+typedef struct _meshtastic_Config_DestinationsConfig_MeshDestination {
+    /* The node number for this destination */
+    uint32_t num;
+    /* Alternative hop limit to use for this destination (zero represents default) */
+    bool has_hop_limit;
+    uint8_t hop_limit;
+    /* Manual next hop specification for messages to this node (zero represents default) */
+    bool has_next_hop;
+    uint8_t next_hop;
+    /* Node number of first desired leap node toward this destination (optional).
+ At least one of first_leap or last_leap should be set to a valid node number
+ if leaping is desired. */
+    bool has_first_leap;
+    uint32_t first_leap;
+    /* Node number of last desired leap node toward this destination (optional).
+ This should ordinarily be the closest reliable node to the destination. */
+    bool has_last_leap;
+    uint32_t last_leap;
+    /* LoRa modem settings to switch out temporarily for messages sent to this destination. */
+    bool has_lora_switch;
+    meshtastic_Config_LoRaConfigLite lora_switch;
+} meshtastic_Config_DestinationsConfig_MeshDestination;
+
+typedef struct _meshtastic_Config_DestinationsConfig {
+    /* Optional default destination for most types of packets that would otherwise be sent to broadcast. */
+    uint32_t default_dest;
+    /* Optional destination for nodeinfo messages. Defaults to default_dest (or if none, broadcast). */
+    uint32_t nodeinfo_dest;
+    /* Optional destination for telemetry messages. Defaults to default_dest (or if none, broadcast). */
+    uint32_t telemetry_dest;
+    /* Optional destination for position messages. Defaults to default_dest (or if none, broadcast). */
+    uint32_t position_dest;
+    /* Configuration slots for custom handling of specified destinations */
+    pb_size_t destinations_count;
+    meshtastic_Config_DestinationsConfig_MeshDestination destinations[8];
+    /* Whether to use leaping or not. */
+    bool leaps_enabled;
+    /* Can be used to specify a dedicated channel to send leap messages on. Intended for backwards compatbility with leap-naive nodes.
+ The leap channel should accordingly not use the default AQ== PSK. */
+    uint8_t leap_channel;
+    /* Whether to allow LoRa channel switching for destinations */
+    bool lora_switch_enabled;
+    /* Whether to restrict LoRa channel switching to packets from us (not both acting as intermediate leap node and switching) 
+ so that leaps can be enabled for others without also switch radio settings for others. */
+    bool only_lora_switch_from_us;
+    /* Whether to restrict leaping with LoRa radio setting changes to messages.
+ Only works if only_lora_switch_from_us is not set and the message is decodable. */
+    bool only_leap_switch_messages;
+    /* Option to select alternative channel to send nodeinfo broadcasts out on.
+ E.g. for if your primary channel is private but you still want your info to appear on a default (but secondary) channel */
+    uint8_t nodeinfo_channel;
+} meshtastic_Config_DestinationsConfig;
+
 typedef struct _meshtastic_Config {
     pb_size_t which_payload_variant;
     union {
@@ -724,6 +792,7 @@ typedef struct _meshtastic_Config {
         meshtastic_Config_SecurityConfig security;
         meshtastic_Config_SessionkeyConfig sessionkey;
         meshtastic_DeviceUIConfig device_ui;
+        meshtastic_Config_DestinationsConfig destinations;
     } payload_variant;
 } meshtastic_Config;
 
@@ -734,8 +803,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _meshtastic_Config_DeviceConfig_Role_MIN meshtastic_Config_DeviceConfig_Role_CLIENT
-#define _meshtastic_Config_DeviceConfig_Role_MAX meshtastic_Config_DeviceConfig_Role_CLIENT_BASE
-#define _meshtastic_Config_DeviceConfig_Role_ARRAYSIZE ((meshtastic_Config_DeviceConfig_Role)(meshtastic_Config_DeviceConfig_Role_CLIENT_BASE+1))
+#define _meshtastic_Config_DeviceConfig_Role_MAX meshtastic_Config_DeviceConfig_Role_CLIENT_LATE
+#define _meshtastic_Config_DeviceConfig_Role_ARRAYSIZE ((meshtastic_Config_DeviceConfig_Role)(meshtastic_Config_DeviceConfig_Role_CLIENT_LATE+1))
 
 #define _meshtastic_Config_DeviceConfig_RebroadcastMode_MIN meshtastic_Config_DeviceConfig_RebroadcastMode_ALL
 #define _meshtastic_Config_DeviceConfig_RebroadcastMode_MAX meshtastic_Config_DeviceConfig_RebroadcastMode_CORE_PORTNUMS_ONLY
@@ -786,8 +855,8 @@ extern "C" {
 #define _meshtastic_Config_LoRaConfig_RegionCode_ARRAYSIZE ((meshtastic_Config_LoRaConfig_RegionCode)(meshtastic_Config_LoRaConfig_RegionCode_ITU2_125CM+1))
 
 #define _meshtastic_Config_LoRaConfig_ModemPreset_MIN meshtastic_Config_LoRaConfig_ModemPreset_LONG_FAST
-#define _meshtastic_Config_LoRaConfig_ModemPreset_MAX meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_TURBO
-#define _meshtastic_Config_LoRaConfig_ModemPreset_ARRAYSIZE ((meshtastic_Config_LoRaConfig_ModemPreset)(meshtastic_Config_LoRaConfig_ModemPreset_MEDIUM_TURBO+1))
+#define _meshtastic_Config_LoRaConfig_ModemPreset_MAX meshtastic_Config_LoRaConfig_ModemPreset_NO_PRESET
+#define _meshtastic_Config_LoRaConfig_ModemPreset_ARRAYSIZE ((meshtastic_Config_LoRaConfig_ModemPreset)(meshtastic_Config_LoRaConfig_ModemPreset_NO_PRESET+1))
 
 #define _meshtastic_Config_LoRaConfig_FEM_LNA_Mode_MIN meshtastic_Config_LoRaConfig_FEM_LNA_Mode_DISABLED
 #define _meshtastic_Config_LoRaConfig_FEM_LNA_Mode_MAX meshtastic_Config_LoRaConfig_FEM_LNA_Mode_NOT_PRESENT
@@ -827,6 +896,10 @@ extern "C" {
 #define meshtastic_Config_SecurityConfig_packet_signature_policy_ENUMTYPE meshtastic_Config_SecurityConfig_PacketSignaturePolicy
 
 
+#define meshtastic_Config_LoRaConfigLite_modem_preset_ENUMTYPE meshtastic_Config_LoRaConfig_ModemPreset
+
+
+
 
 /* Initializer values for message structs */
 #define meshtastic_Config_init_default           {0, {meshtastic_Config_DeviceConfig_init_default}}
@@ -840,6 +913,9 @@ extern "C" {
 #define meshtastic_Config_BluetoothConfig_init_default {0, _meshtastic_Config_BluetoothConfig_PairingMode_MIN, 0}
 #define meshtastic_Config_SecurityConfig_init_default {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0, _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_MIN}
 #define meshtastic_Config_SessionkeyConfig_init_default {0}
+#define meshtastic_Config_LoRaConfigLite_init_default {_meshtastic_Config_LoRaConfig_ModemPreset_MIN, 0}
+#define meshtastic_Config_DestinationsConfig_init_default {0, 0, 0, 0, 0, {meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default, meshtastic_Config_DestinationsConfig_MeshDestination_init_default}, 0, 0, 0, 0, 0, 0}
+#define meshtastic_Config_DestinationsConfig_MeshDestination_init_default {0, false, 0, false, 0, false, 0, false, 0, false, meshtastic_Config_LoRaConfigLite_init_default}
 #define meshtastic_Config_init_zero              {0, {meshtastic_Config_DeviceConfig_init_zero}}
 #define meshtastic_Config_DeviceConfig_init_zero {_meshtastic_Config_DeviceConfig_Role_MIN, 0, 0, 0, _meshtastic_Config_DeviceConfig_RebroadcastMode_MIN, 0, 0, 0, 0, "", 0, _meshtastic_Config_DeviceConfig_BuzzerMode_MIN}
 #define meshtastic_Config_PositionConfig_init_zero {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, _meshtastic_Config_PositionConfig_GpsMode_MIN}
@@ -851,6 +927,9 @@ extern "C" {
 #define meshtastic_Config_BluetoothConfig_init_zero {0, _meshtastic_Config_BluetoothConfig_PairingMode_MIN, 0}
 #define meshtastic_Config_SecurityConfig_init_zero {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0, _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_MIN}
 #define meshtastic_Config_SessionkeyConfig_init_zero {0}
+#define meshtastic_Config_LoRaConfigLite_init_zero {_meshtastic_Config_LoRaConfig_ModemPreset_MIN, 0}
+#define meshtastic_Config_DestinationsConfig_init_zero {0, 0, 0, 0, 0, {meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero, meshtastic_Config_DestinationsConfig_MeshDestination_init_zero}, 0, 0, 0, 0, 0, 0}
+#define meshtastic_Config_DestinationsConfig_MeshDestination_init_zero {0, false, 0, false, 0, false, 0, false, 0, false, meshtastic_Config_LoRaConfigLite_init_zero}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define meshtastic_Config_DeviceConfig_role_tag  1
@@ -946,6 +1025,25 @@ extern "C" {
 #define meshtastic_Config_SecurityConfig_debug_log_api_enabled_tag 6
 #define meshtastic_Config_SecurityConfig_admin_channel_enabled_tag 8
 #define meshtastic_Config_SecurityConfig_packet_signature_policy_tag 9
+#define meshtastic_Config_LoRaConfigLite_modem_preset_tag 1
+#define meshtastic_Config_LoRaConfigLite_channel_num_tag 2
+#define meshtastic_Config_DestinationsConfig_MeshDestination_num_tag 1
+#define meshtastic_Config_DestinationsConfig_MeshDestination_hop_limit_tag 2
+#define meshtastic_Config_DestinationsConfig_MeshDestination_next_hop_tag 3
+#define meshtastic_Config_DestinationsConfig_MeshDestination_first_leap_tag 4
+#define meshtastic_Config_DestinationsConfig_MeshDestination_last_leap_tag 5
+#define meshtastic_Config_DestinationsConfig_MeshDestination_lora_switch_tag 6
+#define meshtastic_Config_DestinationsConfig_default_dest_tag 1
+#define meshtastic_Config_DestinationsConfig_nodeinfo_dest_tag 2
+#define meshtastic_Config_DestinationsConfig_telemetry_dest_tag 3
+#define meshtastic_Config_DestinationsConfig_position_dest_tag 4
+#define meshtastic_Config_DestinationsConfig_destinations_tag 5
+#define meshtastic_Config_DestinationsConfig_leaps_enabled_tag 6
+#define meshtastic_Config_DestinationsConfig_leap_channel_tag 7
+#define meshtastic_Config_DestinationsConfig_lora_switch_enabled_tag 8
+#define meshtastic_Config_DestinationsConfig_only_lora_switch_from_us_tag 9
+#define meshtastic_Config_DestinationsConfig_only_leap_switch_messages_tag 10
+#define meshtastic_Config_DestinationsConfig_nodeinfo_channel_tag 11
 #define meshtastic_Config_device_tag             1
 #define meshtastic_Config_position_tag           2
 #define meshtastic_Config_power_tag              3
@@ -956,6 +1054,7 @@ extern "C" {
 #define meshtastic_Config_security_tag           8
 #define meshtastic_Config_sessionkey_tag         9
 #define meshtastic_Config_device_ui_tag          10
+#define meshtastic_Config_destinations_tag       13
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_Config_FIELDLIST(X, a) \
@@ -968,7 +1067,8 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,lora,payload_variant.lora), 
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,bluetooth,payload_variant.bluetooth),   7) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,security,payload_variant.security),   8) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,sessionkey,payload_variant.sessionkey),   9) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,device_ui,payload_variant.device_ui),  10)
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,device_ui,payload_variant.device_ui),  10) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,destinations,payload_variant.destinations),  13)
 #define meshtastic_Config_CALLBACK NULL
 #define meshtastic_Config_DEFAULT NULL
 #define meshtastic_Config_payload_variant_device_MSGTYPE meshtastic_Config_DeviceConfig
@@ -981,6 +1081,7 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (payload_variant,device_ui,payload_variant.de
 #define meshtastic_Config_payload_variant_security_MSGTYPE meshtastic_Config_SecurityConfig
 #define meshtastic_Config_payload_variant_sessionkey_MSGTYPE meshtastic_Config_SessionkeyConfig
 #define meshtastic_Config_payload_variant_device_ui_MSGTYPE meshtastic_DeviceUIConfig
+#define meshtastic_Config_payload_variant_destinations_MSGTYPE meshtastic_Config_DestinationsConfig
 
 #define meshtastic_Config_DeviceConfig_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    role,              1) \
@@ -1117,6 +1218,39 @@ X(a, STATIC,   SINGULAR, UENUM,    packet_signature_policy,   9)
 #define meshtastic_Config_SessionkeyConfig_CALLBACK NULL
 #define meshtastic_Config_SessionkeyConfig_DEFAULT NULL
 
+#define meshtastic_Config_LoRaConfigLite_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UENUM,    modem_preset,      1) \
+X(a, STATIC,   SINGULAR, UINT32,   channel_num,       2)
+#define meshtastic_Config_LoRaConfigLite_CALLBACK NULL
+#define meshtastic_Config_LoRaConfigLite_DEFAULT NULL
+
+#define meshtastic_Config_DestinationsConfig_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   default_dest,      1) \
+X(a, STATIC,   SINGULAR, UINT32,   nodeinfo_dest,     2) \
+X(a, STATIC,   SINGULAR, UINT32,   telemetry_dest,    3) \
+X(a, STATIC,   SINGULAR, UINT32,   position_dest,     4) \
+X(a, STATIC,   REPEATED, MESSAGE,  destinations,      5) \
+X(a, STATIC,   SINGULAR, BOOL,     leaps_enabled,     6) \
+X(a, STATIC,   SINGULAR, UINT32,   leap_channel,      7) \
+X(a, STATIC,   SINGULAR, BOOL,     lora_switch_enabled,   8) \
+X(a, STATIC,   SINGULAR, BOOL,     only_lora_switch_from_us,   9) \
+X(a, STATIC,   SINGULAR, BOOL,     only_leap_switch_messages,  10) \
+X(a, STATIC,   SINGULAR, UINT32,   nodeinfo_channel,  11)
+#define meshtastic_Config_DestinationsConfig_CALLBACK NULL
+#define meshtastic_Config_DestinationsConfig_DEFAULT NULL
+#define meshtastic_Config_DestinationsConfig_destinations_MSGTYPE meshtastic_Config_DestinationsConfig_MeshDestination
+
+#define meshtastic_Config_DestinationsConfig_MeshDestination_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, UINT32,   num,               1) \
+X(a, STATIC,   OPTIONAL, UINT32,   hop_limit,         2) \
+X(a, STATIC,   OPTIONAL, UINT32,   next_hop,          3) \
+X(a, STATIC,   OPTIONAL, UINT32,   first_leap,        4) \
+X(a, STATIC,   OPTIONAL, UINT32,   last_leap,         5) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  lora_switch,       6)
+#define meshtastic_Config_DestinationsConfig_MeshDestination_CALLBACK NULL
+#define meshtastic_Config_DestinationsConfig_MeshDestination_DEFAULT NULL
+#define meshtastic_Config_DestinationsConfig_MeshDestination_lora_switch_MSGTYPE meshtastic_Config_LoRaConfigLite
+
 extern const pb_msgdesc_t meshtastic_Config_msg;
 extern const pb_msgdesc_t meshtastic_Config_DeviceConfig_msg;
 extern const pb_msgdesc_t meshtastic_Config_PositionConfig_msg;
@@ -1128,6 +1262,9 @@ extern const pb_msgdesc_t meshtastic_Config_LoRaConfig_msg;
 extern const pb_msgdesc_t meshtastic_Config_BluetoothConfig_msg;
 extern const pb_msgdesc_t meshtastic_Config_SecurityConfig_msg;
 extern const pb_msgdesc_t meshtastic_Config_SessionkeyConfig_msg;
+extern const pb_msgdesc_t meshtastic_Config_LoRaConfigLite_msg;
+extern const pb_msgdesc_t meshtastic_Config_DestinationsConfig_msg;
+extern const pb_msgdesc_t meshtastic_Config_DestinationsConfig_MeshDestination_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define meshtastic_Config_fields &meshtastic_Config_msg
@@ -1141,20 +1278,26 @@ extern const pb_msgdesc_t meshtastic_Config_SessionkeyConfig_msg;
 #define meshtastic_Config_BluetoothConfig_fields &meshtastic_Config_BluetoothConfig_msg
 #define meshtastic_Config_SecurityConfig_fields &meshtastic_Config_SecurityConfig_msg
 #define meshtastic_Config_SessionkeyConfig_fields &meshtastic_Config_SessionkeyConfig_msg
+#define meshtastic_Config_LoRaConfigLite_fields &meshtastic_Config_LoRaConfigLite_msg
+#define meshtastic_Config_DestinationsConfig_fields &meshtastic_Config_DestinationsConfig_msg
+#define meshtastic_Config_DestinationsConfig_MeshDestination_fields &meshtastic_Config_DestinationsConfig_MeshDestination_msg
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_CONFIG_PB_H_MAX_SIZE meshtastic_Config_size
 #define meshtastic_Config_BluetoothConfig_size   10
+#define meshtastic_Config_DestinationsConfig_MeshDestination_size 33
+#define meshtastic_Config_DestinationsConfig_size 318
 #define meshtastic_Config_DeviceConfig_size      100
 #define meshtastic_Config_DisplayConfig_size     36
-#define meshtastic_Config_LoRaConfig_size        91
+#define meshtastic_Config_LoRaConfigLite_size    7
+#define meshtastic_Config_LoRaConfig_size        92
 #define meshtastic_Config_NetworkConfig_IpV4Config_size 20
 #define meshtastic_Config_NetworkConfig_size     204
 #define meshtastic_Config_PositionConfig_size    62
 #define meshtastic_Config_PowerConfig_size       52
 #define meshtastic_Config_SecurityConfig_size    180
 #define meshtastic_Config_SessionkeyConfig_size  0
-#define meshtastic_Config_size                   207
+#define meshtastic_Config_size                   321
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -497,7 +497,7 @@ typedef struct _meshtastic_ModuleConfig_MeshBeaconConfig {
     /* Single-target TX channel: channel settings (name + PSK) to send beacons on.
  If unset, beacons go out on the primary channel. Used only when broadcast_targets is empty.
  NOTE: the single-target path embeds the ChannelSettings inline here, whereas a
- broadcast_targets entry references a channel-table slot by channel_index instead - see
+ broadcast_targets entry references a channel-table slot by channel_index instead — see
  BroadcastTarget. The two paths are equal, first-class options; only this representation differs. */
     bool has_broadcast_on_channel;
     meshtastic_ChannelSettings broadcast_on_channel;
@@ -514,7 +514,7 @@ typedef struct _meshtastic_ModuleConfig_MeshBeaconConfig {
  each temporarily switching the radio to that entry's preset/region/channel.
  When empty, the broadcaster uses the scalar broadcast_on_preset / broadcast_on_region /
  broadcast_on_channel fields instead (the single-target path).
- Single- and multi-target are equal, first-class options - neither is preferred or
+ Single- and multi-target are equal, first-class options — neither is preferred or
  deprecated. They differ only in how the TX channel is named: broadcast_on_channel embeds a
  ChannelSettings inline, while a target references an existing channel-table slot by
  channel_index (see BroadcastTarget). */
@@ -1163,8 +1163,8 @@ extern const pb_msgdesc_t meshtastic_RemoteHardwarePin_msg;
 #define meshtastic_ModuleConfig_ExternalNotificationConfig_size 42
 #define meshtastic_ModuleConfig_MQTTConfig_size  224
 #define meshtastic_ModuleConfig_MapReportSettings_size 14
-#define meshtastic_ModuleConfig_MeshBeaconConfig_BroadcastTarget_size 10
-#define meshtastic_ModuleConfig_MeshBeaconConfig_size 324
+#define meshtastic_ModuleConfig_MeshBeaconConfig_BroadcastTarget_size 11
+#define meshtastic_ModuleConfig_MeshBeaconConfig_size 330
 #define meshtastic_ModuleConfig_NeighborInfoConfig_size 10
 #define meshtastic_ModuleConfig_PaxcounterConfig_size 30
 #define meshtastic_ModuleConfig_RangeTestConfig_size 12
@@ -1175,7 +1175,7 @@ extern const pb_msgdesc_t meshtastic_RemoteHardwarePin_msg;
 #define meshtastic_ModuleConfig_TAKConfig_size   4
 #define meshtastic_ModuleConfig_TelemetryConfig_size 50
 #define meshtastic_ModuleConfig_TrafficManagementConfig_size 30
-#define meshtastic_ModuleConfig_size             328
+#define meshtastic_ModuleConfig_size             334
 #define meshtastic_RemoteHardwarePin_size        21
 
 #ifdef __cplusplus
