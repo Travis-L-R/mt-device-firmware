@@ -7,8 +7,12 @@
 #include "CryptoEngine.h"
 #include "Default.h"
 #include "FSCommon.h"
+#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
+#include <SD.h>
+#endif
 #include "MeshRadio.h"
 #include "MeshService.h"
+#include "MessageStore.h"
 #include "NodeDB.h"
 #include "PacketHistory.h"
 #include "PowerFSM.h"
@@ -531,6 +535,9 @@ bool NodeDB::factoryReset(bool eraseBleBonds)
     if (transmitHistory) {
         transmitHistory->clear();
     }
+#if HAS_SCREEN
+    messageStore.clearAllMessages();
+#endif
     // second, install default state (this will deal with the duplicate mac address issue)
     installDefaultNodeDatabase();
     installDefaultDeviceState();
@@ -844,7 +851,8 @@ void NodeDB::installDefaultModuleConfig()
     moduleConfig.has_store_forward = true;
     moduleConfig.has_telemetry = true;
     moduleConfig.has_external_notification = true;
-#if defined(PIN_BUZZER) || defined(PIN_VIBRATION) || defined(LED_NOTIFICATION) || defined(PCA_LED_NOTIFICATION)
+#if defined(PIN_BUZZER) || defined(PIN_VIBRATION) || defined(LED_NOTIFICATION) || defined(PCA_LED_NOTIFICATION) ||               \
+    defined(NEOPIXEL_STATUS_NOTIFICATION_PIN)
     moduleConfig.external_notification.enabled = true;
 #endif
 #if defined(PIN_BUZZER)
@@ -865,7 +873,7 @@ void NodeDB::installDefaultModuleConfig()
 #endif
 #if defined(PIN_VIBRATION)
     moduleConfig.external_notification.nag_timeout = 2;
-#elif defined(PIN_BUZZER) || defined(LED_NOTIFICATION)
+#elif defined(PIN_BUZZER) || defined(LED_NOTIFICATION) || defined(NEOPIXEL_STATUS_NOTIFICATION_PIN)
     moduleConfig.external_notification.nag_timeout = default_ringtone_nag_secs;
 #endif
 
@@ -2182,23 +2190,52 @@ bool NodeDB::checkLowEntropyPublicKey(const meshtastic_Config_SecurityConfig_pub
 }
 #endif
 
+#ifdef FSCom
+// Shared by the FLASH and SD backup locations so the two paths can't drift apart
+static meshtastic_BackupPreferences buildBackupPreferences()
+{
+    meshtastic_BackupPreferences backup = meshtastic_BackupPreferences_init_zero;
+    backup.version = DEVICESTATE_CUR_VER;
+    backup.timestamp = getValidTime(RTCQuality::RTCQualityDevice, false);
+    backup.has_config = true;
+    backup.config = config;
+    backup.has_module_config = true;
+    backup.module_config = moduleConfig;
+    backup.has_channels = true;
+    backup.channels = channelFile;
+    backup.has_owner = true;
+    backup.owner = owner;
+    return backup;
+}
+
+static void applyRestoredPreferences(const meshtastic_BackupPreferences &backup, int restoreWhat)
+{
+    if (restoreWhat & SEGMENT_CONFIG) {
+        config = backup.config;
+        LOG_DEBUG("Restored config");
+    }
+    if (restoreWhat & SEGMENT_MODULECONFIG) {
+        moduleConfig = backup.module_config;
+        LOG_DEBUG("Restored module config");
+    }
+    if (restoreWhat & SEGMENT_DEVICESTATE) {
+        devicestate.owner = backup.owner;
+        LOG_DEBUG("Restored device state");
+    }
+    if (restoreWhat & SEGMENT_CHANNELS) {
+        channelFile = backup.channels;
+        LOG_DEBUG("Restored channels");
+    }
+}
+#endif
+
 bool NodeDB::backupPreferences(meshtastic_AdminMessage_BackupLocation location)
 {
     bool success = false;
     lastBackupAttempt = millis();
 #ifdef FSCom
     if (location == meshtastic_AdminMessage_BackupLocation_FLASH) {
-        meshtastic_BackupPreferences backup = meshtastic_BackupPreferences_init_zero;
-        backup.version = DEVICESTATE_CUR_VER;
-        backup.timestamp = getValidTime(RTCQuality::RTCQualityDevice, false);
-        backup.has_config = true;
-        backup.config = config;
-        backup.has_module_config = true;
-        backup.module_config = moduleConfig;
-        backup.has_channels = true;
-        backup.channels = channelFile;
-        backup.has_owner = true;
-        backup.owner = owner;
+        meshtastic_BackupPreferences backup = buildBackupPreferences();
 
         size_t backupSize;
         pb_get_encoded_size(&backupSize, meshtastic_BackupPreferences_fields, &backup);
@@ -2214,7 +2251,33 @@ bool NodeDB::backupPreferences(meshtastic_AdminMessage_BackupLocation location)
             LOG_ERROR("Failed to save backup preferences to file");
         }
     } else if (location == meshtastic_AdminMessage_BackupLocation_SD) {
-        // TODO: After more mainline SD card support
+#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
+        meshtastic_BackupPreferences backup = buildBackupPreferences();
+
+        std::vector<uint8_t> buffer(meshtastic_BackupPreferences_size);
+        pb_ostream_t stream = pb_ostream_from_buffer(buffer.data(), buffer.size());
+        if (!pb_encode(&stream, &meshtastic_BackupPreferences_msg, &backup)) {
+            LOG_ERROR("Failed to encode backup preferences");
+            return false;
+        }
+
+        concurrency::LockGuard g(spiLock);
+        SD.mkdir("/backups");
+        File file = SD.open(backupFileName, FILE_WRITE);
+        if (!file) {
+            LOG_ERROR("Failed to open %s on SD card (no card inserted?)", backupFileName);
+            return false;
+        }
+        success = file.write(buffer.data(), stream.bytes_written) == stream.bytes_written;
+        file.close();
+        if (success) {
+            LOG_INFO("Saved backup preferences to SD card");
+        } else {
+            LOG_ERROR("Failed to save backup preferences to SD card");
+        }
+#else
+        LOG_ERROR("SD card backup requested, but this device has no SD card support");
+#endif
     }
 #endif
     return success;
@@ -2237,22 +2300,7 @@ bool NodeDB::restorePreferences(meshtastic_AdminMessage_BackupLocation location,
         success = loadProto(backupFileName, meshtastic_BackupPreferences_size, sizeof(meshtastic_BackupPreferences),
                             &meshtastic_BackupPreferences_msg, &backup);
         if (success) {
-            if (restoreWhat & SEGMENT_CONFIG) {
-                config = backup.config;
-                LOG_DEBUG("Restored config");
-            }
-            if (restoreWhat & SEGMENT_MODULECONFIG) {
-                moduleConfig = backup.module_config;
-                LOG_DEBUG("Restored module config");
-            }
-            if (restoreWhat & SEGMENT_DEVICESTATE) {
-                devicestate.owner = backup.owner;
-                LOG_DEBUG("Restored device state");
-            }
-            if (restoreWhat & SEGMENT_CHANNELS) {
-                channelFile = backup.channels;
-                LOG_DEBUG("Restored channels");
-            }
+            applyRestoredPreferences(backup, restoreWhat);
 
             success = saveToDisk(restoreWhat);
             if (success) {
@@ -2264,7 +2312,46 @@ bool NodeDB::restorePreferences(meshtastic_AdminMessage_BackupLocation location,
             LOG_ERROR("Failed to restore preferences from backup file");
         }
     } else if (location == meshtastic_AdminMessage_BackupLocation_SD) {
-        // TODO: After more mainline SD card support
+#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
+        std::vector<uint8_t> buffer;
+        {
+            concurrency::LockGuard g(spiLock);
+            File file = SD.open(backupFileName, FILE_READ);
+            if (!file) {
+                LOG_WARN("Could not restore. No backup file found on SD card");
+                return false;
+            }
+            size_t fileSize = file.size();
+            if (fileSize == 0 || fileSize > meshtastic_BackupPreferences_size + 256) {
+                file.close();
+                LOG_ERROR("Could not restore. Backup file on SD card has implausible size %u", (unsigned)fileSize);
+                return false;
+            }
+            buffer.resize(fileSize);
+            if ((size_t)file.read(buffer.data(), fileSize) != fileSize) {
+                file.close();
+                LOG_ERROR("Could not restore. Failed to read backup file from SD card");
+                return false;
+            }
+            file.close();
+        }
+        meshtastic_BackupPreferences backup = meshtastic_BackupPreferences_init_zero;
+        pb_istream_t stream = pb_istream_from_buffer(buffer.data(), buffer.size());
+        success = pb_decode(&stream, &meshtastic_BackupPreferences_msg, &backup);
+        if (!success) {
+            LOG_ERROR("Failed to decode backup preferences from SD card");
+            return false;
+        }
+        applyRestoredPreferences(backup, restoreWhat);
+        success = saveToDisk(restoreWhat);
+        if (success) {
+            LOG_INFO("Restored preferences from SD card backup");
+        } else {
+            LOG_ERROR("Failed to save restored preferences to flash");
+        }
+#else
+        LOG_ERROR("SD card restore requested, but this device has no SD card support");
+#endif
     }
 #endif
     return success;

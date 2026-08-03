@@ -203,7 +203,9 @@ typedef enum _meshtastic_Config_DisplayConfig_OledType {
     /* Can not be auto detected but set by proto. Used for 128x64 screens */
     meshtastic_Config_DisplayConfig_OledType_OLED_SH1107 = 3,
     /* Can not be auto detected but set by proto. Used for 128x128 screens */
-    meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_128_128 = 4
+    meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_128_128 = 4,
+    /* Can not be auto detected but set by proto. Used for 64x128 rotated screens */
+    meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_ROTATED = 5
 } meshtastic_Config_DisplayConfig_OledType;
 
 typedef enum _meshtastic_Config_DisplayConfig_DisplayMode {
@@ -244,6 +246,19 @@ typedef enum _meshtastic_Config_BluetoothConfig_PairingMode {
     /* Device requires no PIN for pairing */
     meshtastic_Config_BluetoothConfig_PairingMode_NO_PIN = 2
 } meshtastic_Config_BluetoothConfig_PairingMode;
+
+/* Controls how the device authenticates remotely received mesh packets. */
+typedef enum _meshtastic_Config_SecurityConfig_PacketSignaturePolicy {
+    /* Accept unsigned packets for maximum compatibility while still rejecting malformed or invalid signatures.
+ This is the default to avoid legacy nodes dropping signed packets during rebroadcast. */
+    meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_COMPATIBLE = 0,
+    /* Prefer authenticated packets while retaining compatibility with unsigned packets from nodes not known to sign.
+ Rejects unsigned, signable broadcasts from nodes that have previously signed. */
+    meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_BALANCED = 1,
+    /* Accept only packets authenticated by a verified XEdDSA signature or successful PKI decryption.
+ Unsigned, malformed, invalid, or unverifiable packets are ignored. */
+    meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_STRICT = 2
+} meshtastic_Config_SecurityConfig_PacketSignaturePolicy;
 
 /* Struct definitions */
 /* Configuration */
@@ -459,6 +474,8 @@ typedef struct _meshtastic_Config_SecurityConfig {
     bool debug_log_api_enabled;
     /* Allow incoming device control over the insecure legacy admin channel. */
     bool admin_channel_enabled;
+    /* Determines the packet signature policy applied to remotely received mesh packets. */
+    meshtastic_Config_SecurityConfig_PacketSignaturePolicy packet_signature_policy;
 } meshtastic_Config_SecurityConfig;
 
 /* Blank config request, strictly for getting the session key */
@@ -526,8 +543,8 @@ extern "C" {
 #define _meshtastic_Config_DisplayConfig_DisplayUnits_ARRAYSIZE ((meshtastic_Config_DisplayConfig_DisplayUnits)(meshtastic_Config_DisplayConfig_DisplayUnits_IMPERIAL+1))
 
 #define _meshtastic_Config_DisplayConfig_OledType_MIN meshtastic_Config_DisplayConfig_OledType_OLED_AUTO
-#define _meshtastic_Config_DisplayConfig_OledType_MAX meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_128_128
-#define _meshtastic_Config_DisplayConfig_OledType_ARRAYSIZE ((meshtastic_Config_DisplayConfig_OledType)(meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_128_128+1))
+#define _meshtastic_Config_DisplayConfig_OledType_MAX meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_ROTATED
+#define _meshtastic_Config_DisplayConfig_OledType_ARRAYSIZE ((meshtastic_Config_DisplayConfig_OledType)(meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_ROTATED+1))
 
 #define _meshtastic_Config_DisplayConfig_DisplayMode_MIN meshtastic_Config_DisplayConfig_DisplayMode_DEFAULT
 #define _meshtastic_Config_DisplayConfig_DisplayMode_MAX meshtastic_Config_DisplayConfig_DisplayMode_COLOR
@@ -540,6 +557,10 @@ extern "C" {
 #define _meshtastic_Config_BluetoothConfig_PairingMode_MIN meshtastic_Config_BluetoothConfig_PairingMode_RANDOM_PIN
 #define _meshtastic_Config_BluetoothConfig_PairingMode_MAX meshtastic_Config_BluetoothConfig_PairingMode_NO_PIN
 #define _meshtastic_Config_BluetoothConfig_PairingMode_ARRAYSIZE ((meshtastic_Config_BluetoothConfig_PairingMode)(meshtastic_Config_BluetoothConfig_PairingMode_NO_PIN+1))
+
+#define _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_MIN meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_COMPATIBLE
+#define _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_MAX meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_STRICT
+#define _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_ARRAYSIZE ((meshtastic_Config_SecurityConfig_PacketSignaturePolicy)(meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_STRICT+1))
 
 
 #define meshtastic_Config_DeviceConfig_role_ENUMTYPE meshtastic_Config_DeviceConfig_Role
@@ -560,6 +581,7 @@ extern "C" {
 
 #define meshtastic_Config_BluetoothConfig_mode_ENUMTYPE meshtastic_Config_BluetoothConfig_PairingMode
 
+#define meshtastic_Config_SecurityConfig_packet_signature_policy_ENUMTYPE meshtastic_Config_SecurityConfig_PacketSignaturePolicy
 
 
 
@@ -572,7 +594,7 @@ extern "C" {
 #define meshtastic_Config_NetworkConfig_IpV4Config_init_default {0, 0, 0, 0}
 #define meshtastic_Config_DisplayConfig_init_default {0, _meshtastic_Config_DisplayConfig_DeprecatedGpsCoordinateFormat_MIN, 0, 0, 0, _meshtastic_Config_DisplayConfig_DisplayUnits_MIN, _meshtastic_Config_DisplayConfig_OledType_MIN, _meshtastic_Config_DisplayConfig_DisplayMode_MIN, 0, 0, _meshtastic_Config_DisplayConfig_CompassOrientation_MIN, 0, 0, 0}
 #define meshtastic_Config_BluetoothConfig_init_default {0, _meshtastic_Config_BluetoothConfig_PairingMode_MIN, 0}
-#define meshtastic_Config_SecurityConfig_init_default {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0}
+#define meshtastic_Config_SecurityConfig_init_default {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0, _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_MIN}
 #define meshtastic_Config_SessionkeyConfig_init_default {0}
 #define meshtastic_Config_init_zero              {0, {meshtastic_Config_DeviceConfig_init_zero}}
 #define meshtastic_Config_DeviceConfig_init_zero {_meshtastic_Config_DeviceConfig_Role_MIN, 0, 0, 0, _meshtastic_Config_DeviceConfig_RebroadcastMode_MIN, 0, 0, 0, 0, "", 0, _meshtastic_Config_DeviceConfig_BuzzerMode_MIN}
@@ -582,7 +604,7 @@ extern "C" {
 #define meshtastic_Config_NetworkConfig_IpV4Config_init_zero {0, 0, 0, 0}
 #define meshtastic_Config_DisplayConfig_init_zero {0, _meshtastic_Config_DisplayConfig_DeprecatedGpsCoordinateFormat_MIN, 0, 0, 0, _meshtastic_Config_DisplayConfig_DisplayUnits_MIN, _meshtastic_Config_DisplayConfig_OledType_MIN, _meshtastic_Config_DisplayConfig_DisplayMode_MIN, 0, 0, _meshtastic_Config_DisplayConfig_CompassOrientation_MIN, 0, 0, 0}
 #define meshtastic_Config_BluetoothConfig_init_zero {0, _meshtastic_Config_BluetoothConfig_PairingMode_MIN, 0}
-#define meshtastic_Config_SecurityConfig_init_zero {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0}
+#define meshtastic_Config_SecurityConfig_init_zero {{0, {0}}, {0, {0}}, 0, {{0, {0}}, {0, {0}}, {0, {0}}}, 0, 0, 0, 0, _meshtastic_Config_SecurityConfig_PacketSignaturePolicy_MIN}
 #define meshtastic_Config_SessionkeyConfig_init_zero {0}
 
 /* Field tags (for use in manual encoding/decoding) */
@@ -658,6 +680,7 @@ extern "C" {
 #define meshtastic_Config_SecurityConfig_serial_enabled_tag 5
 #define meshtastic_Config_SecurityConfig_debug_log_api_enabled_tag 6
 #define meshtastic_Config_SecurityConfig_admin_channel_enabled_tag 8
+#define meshtastic_Config_SecurityConfig_packet_signature_policy_tag 9
 #define meshtastic_Config_device_tag             1
 #define meshtastic_Config_position_tag           2
 #define meshtastic_Config_power_tag              3
@@ -798,7 +821,8 @@ X(a, STATIC,   REPEATED, BYTES,    admin_key,         3) \
 X(a, STATIC,   SINGULAR, BOOL,     is_managed,        4) \
 X(a, STATIC,   SINGULAR, BOOL,     serial_enabled,    5) \
 X(a, STATIC,   SINGULAR, BOOL,     debug_log_api_enabled,   6) \
-X(a, STATIC,   SINGULAR, BOOL,     admin_channel_enabled,   8)
+X(a, STATIC,   SINGULAR, BOOL,     admin_channel_enabled,   8) \
+X(a, STATIC,   SINGULAR, UENUM,    packet_signature_policy,   9)
 #define meshtastic_Config_SecurityConfig_CALLBACK NULL
 #define meshtastic_Config_SecurityConfig_DEFAULT NULL
 
@@ -839,7 +863,7 @@ extern const pb_msgdesc_t meshtastic_Config_SessionkeyConfig_msg;
 #define meshtastic_Config_NetworkConfig_size     204
 #define meshtastic_Config_PositionConfig_size    62
 #define meshtastic_Config_PowerConfig_size       52
-#define meshtastic_Config_SecurityConfig_size    178
+#define meshtastic_Config_SecurityConfig_size    180
 #define meshtastic_Config_SessionkeyConfig_size  0
 #define meshtastic_Config_size                   321
 
