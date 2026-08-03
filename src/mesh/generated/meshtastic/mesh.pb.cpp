@@ -105,7 +105,7 @@ PB_BIND(meshtastic_LoRaPresetGroup, meshtastic_LoRaPresetGroup, AUTO)
 PB_BIND(meshtastic_LoRaRegionPresets, meshtastic_LoRaRegionPresets, AUTO)
 
 
-PB_BIND(meshtastic_LoRaRegionPresetMap, meshtastic_LoRaRegionPresetMap, 2)
+PB_BIND(meshtastic_LoRaRegionPresetMap, meshtastic_LoRaRegionPresetMap, AUTO)
 
 
 PB_BIND(meshtastic_Heartbeat, meshtastic_Heartbeat, AUTO)

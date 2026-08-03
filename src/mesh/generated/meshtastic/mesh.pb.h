@@ -1276,7 +1276,7 @@ typedef struct _meshtastic_DeviceMetadata {
 typedef struct _meshtastic_LoRaPresetGroup {
     /* The modem presets that are legal for every region referencing this group. */
     pb_size_t presets_count;
-    meshtastic_LoRaConfig_ModemPreset presets[11];
+    meshtastic_LoRaConfig_ModemPreset presets[1];
     /* The firmware's default modem preset for regions in this group.
  Always one of `presets`. Clients should select this when switching to one
  of these regions, or when the current preset is not legal in the new region. */
@@ -1309,10 +1309,10 @@ typedef struct _meshtastic_LoRaRegionPresetMap {
     /* One entry per distinct (preset-list, default, licensing) combination.
  Referenced by index from `region_groups`. */
     pb_size_t groups_count;
-    meshtastic_LoRaPresetGroup groups[8];
+    meshtastic_LoRaPresetGroup groups[1];
     /* One entry per known LoRa region, pointing at its preset group. */
     pb_size_t region_groups_count;
-    meshtastic_LoRaRegionPresets region_groups[38];
+    meshtastic_LoRaRegionPresets region_groups[1];
 } meshtastic_LoRaRegionPresetMap;
 
 /* A heartbeat message is sent to the node from the client to keep the connection alive.
@@ -1786,9 +1786,9 @@ extern "C" {
 #define meshtastic_NeighborInfo_init_default     {0, 0, 0, 0, {meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default, meshtastic_Neighbor_init_default}}
 #define meshtastic_Neighbor_init_default         {0, 0, 0, 0}
 #define meshtastic_DeviceMetadata_init_default   {"", 0, 0, 0, 0, 0, _meshtastic_Config_DeviceConfig_Role_MIN, 0, _meshtastic_HardwareModel_MIN, 0, 0, 0, 0}
-#define meshtastic_LoRaPresetGroup_init_default  {0, {_meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN}, _meshtastic_LoRaConfig_ModemPreset_MIN, 0}
+#define meshtastic_LoRaPresetGroup_init_default  {0, {_meshtastic_LoRaConfig_ModemPreset_MIN}, _meshtastic_LoRaConfig_ModemPreset_MIN, 0}
 #define meshtastic_LoRaRegionPresets_init_default {_meshtastic_LoRaConfig_RegionCode_MIN, 0}
-#define meshtastic_LoRaRegionPresetMap_init_default {0, {meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default, meshtastic_LoRaPresetGroup_init_default}, 0, {meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default, meshtastic_LoRaRegionPresets_init_default}}
+#define meshtastic_LoRaRegionPresetMap_init_default {0, {meshtastic_LoRaPresetGroup_init_default}, 0, {meshtastic_LoRaRegionPresets_init_default}}
 #define meshtastic_Heartbeat_init_default        {0}
 #define meshtastic_NodeRemoteHardwarePin_init_default {0, false, meshtastic_RemoteHardwarePin_init_default}
 #define meshtastic_ChunkedPayload_init_default   {0, 0, 0, {0, {0}}}
@@ -1826,9 +1826,9 @@ extern "C" {
 #define meshtastic_NeighborInfo_init_zero        {0, 0, 0, 0, {meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero, meshtastic_Neighbor_init_zero}}
 #define meshtastic_Neighbor_init_zero            {0, 0, 0, 0}
 #define meshtastic_DeviceMetadata_init_zero      {"", 0, 0, 0, 0, 0, _meshtastic_Config_DeviceConfig_Role_MIN, 0, _meshtastic_HardwareModel_MIN, 0, 0, 0, 0}
-#define meshtastic_LoRaPresetGroup_init_zero     {0, {_meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN, _meshtastic_LoRaConfig_ModemPreset_MIN}, _meshtastic_LoRaConfig_ModemPreset_MIN, 0}
+#define meshtastic_LoRaPresetGroup_init_zero     {0, {_meshtastic_LoRaConfig_ModemPreset_MIN}, _meshtastic_LoRaConfig_ModemPreset_MIN, 0}
 #define meshtastic_LoRaRegionPresets_init_zero   {_meshtastic_LoRaConfig_RegionCode_MIN, 0}
-#define meshtastic_LoRaRegionPresetMap_init_zero {0, {meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero, meshtastic_LoRaPresetGroup_init_zero}, 0, {meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero, meshtastic_LoRaRegionPresets_init_zero}}
+#define meshtastic_LoRaRegionPresetMap_init_zero {0, {meshtastic_LoRaPresetGroup_init_zero}, 0, {meshtastic_LoRaRegionPresets_init_zero}}
 #define meshtastic_Heartbeat_init_zero           {0}
 #define meshtastic_NodeRemoteHardwarePin_init_zero {0, false, meshtastic_RemoteHardwarePin_init_zero}
 #define meshtastic_ChunkedPayload_init_zero      {0, 0, 0, {0, {0}}}
@@ -2620,15 +2620,15 @@ extern const pb_msgdesc_t meshtastic_LeapData_msg;
 #define meshtastic_DeviceMetadata_size           56
 #define meshtastic_DuplicatedPublicKey_size      0
 #define meshtastic_FileInfo_size                 236
-#define meshtastic_FromRadio_size                596
+#define meshtastic_FromRadio_size                510
 #define meshtastic_Heartbeat_size                6
 #define meshtastic_KeyVerificationFinal_size     65
 #define meshtastic_KeyVerificationNumberInform_size 58
 #define meshtastic_KeyVerificationNumberRequest_size 52
 #define meshtastic_KeyVerification_size          79
 #define meshtastic_LeapData_size                 30
-#define meshtastic_LoRaPresetGroup_size          38
-#define meshtastic_LoRaRegionPresetMap_size      586
+#define meshtastic_LoRaPresetGroup_size          9
+#define meshtastic_LoRaRegionPresetMap_size      20
 #define meshtastic_LoRaRegionPresets_size        5
 #define meshtastic_LockdownStatus_size           53
 #define meshtastic_LogRecord_size                426
