@@ -119,18 +119,18 @@ const RegionInfo regions[] = {
      */
     RDEF(EU_433, 433.0f, 434.0f, 10, 10, false, false, PROFILE_STD, PRESET(LONG_FAST), 0),
     /*
-        https://www.thethingsnetwork.org/docs/lorawan/duty-cycle/
-        https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/
-        https://www.legislation.gov.uk/uksi/1999/930/schedule/6/part/III/made/data.xht?view=snippet&wrap=true
+       https://www.thethingsnetwork.org/docs/lorawan/duty-cycle/
+       https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/
+       https://www.legislation.gov.uk/uksi/1999/930/schedule/6/part/III/made/data.xht?view=snippet&wrap=true
 
-        audio_permitted = false per regulation
+       audio_permitted = false per regulation
 
-        Special Note:
-        The link above describes LoRaWAN's band plan, stating a power limit of 16 dBm. This is their own suggested specification,
-        we do not need to follow it. The European Union regulations clearly state that the power limit for this frequency range is
-        500 mW, or 27 dBm. It also states that we can use interference avoidance and spectrum access techniques (such as LBT +
-        AFA) to avoid a duty cycle. (Please refer to line P page 22 of this document.)
-        https://www.etsi.org/deliver/etsi_en/300200_300299/30022002/03.01.01_60/en_30022002v030101p.pdf
+       Special Note:
+       The link above describes LoRaWAN's band plan, stating a power limit of 16 dBm. This is their own suggested specification,
+       we do not need to follow it. The European Union regulations clearly state that the power limit for this frequency range is
+       500 mW, or 27 dBm. It also states that we can use interference avoidance and spectrum access techniques (such as LBT +
+       AFA) to avoid a duty cycle. (Please refer to line P page 22 of this document.)
+       https://www.etsi.org/deliver/etsi_en/300200_300299/30022002/03.01.01_60/en_30022002v030101p.pdf
 
         EU 866MHz band (Band no. 46b of 2006/771/EC and subsequent amendments) for Non-specific short-range devices (SRD)
         Gives 4 channels at 865.7/866.3/866.9/867.5 MHz, 400 kHz gap plus 37.5 kHz padding between channels, 27 dBm,
@@ -139,7 +139,7 @@ const RegionInfo regions[] = {
         EU 868MHz band: 3 channels at 869.410/869.4625/869.577 MHz
         Channel centres at 869.442/869.525/869.608 MHz,
         10.4 kHz padding on channels, 27 dBm, duty cycle 10%
-    */
+     */
     RDEF(EU_868, 869.4f, 869.65f, 10, 27, false, false, PROFILE_EU868, PRESET(LONG_FAST), 0),
     RDEF(EU_866, 865.6f, 867.6f, 2.5, 27, false, false, PROFILE_LITE, PRESET(LITE_FAST), 0),
     RDEF(EU_N_868, 869.4f, 869.65f, 10, 27, false, false, PROFILE_NARROW, PRESET(NARROW_SLOW), 1),
@@ -702,7 +702,7 @@ void getRegionPresetMap(meshtastic_LoRaRegionPresetMap &map)
             if (groupProfile[g] == r->profile && map.groups[g].default_preset == r->getDefaultPreset()) {
                 gi = g;
                 break;
-            }
+}
         }
         if (gi < 0) {
             if (map.groups_count >= maxGroups) {
@@ -968,6 +968,14 @@ void RadioInterface::saveChannelNum(uint32_t channel_num)
 }
 
 /**
+ * Save our modemPreset for later reuse.
+ */
+void RadioInterface::saveModemPreset(meshtastic_Config_LoRaConfig_ModemPreset preset)
+{
+    savedModemPreset = preset;
+}
+
+/**
  * Save our frequency for later reuse.
  */
 float RadioInterface::getFreq()
@@ -981,6 +989,14 @@ float RadioInterface::getFreq()
 uint32_t RadioInterface::getChannelNum()
 {
     return savedChannelNum;
+}
+
+/**
+ * Return our saved modem preset
+ */
+meshtastic_Config_LoRaConfig_ModemPreset RadioInterface::getModemPreset()
+{
+    return savedModemPreset;
 }
 
 /**
@@ -1267,16 +1283,16 @@ void RadioInterface::applyModemConfig()
         }
         // If the custom CR is higher than the preset, use it
         else if (loraConfig.coding_rate >= 5 && loraConfig.coding_rate <= 8 && loraConfig.coding_rate > newcr) {
-            cr = loraConfig.coding_rate;
-            LOG_INFO("Using custom Coding Rate %u", cr);
+                cr = loraConfig.coding_rate;
+                LOG_INFO("Using custom Coding Rate %u", cr);
         } else {
             cr = newcr;
         }
 
     } else { // if not using preset, then just use the custom settings
         if (validateConfigLora(loraConfig)) {
-        } else {
-            LOG_WARN("Invalid LoRa config settings, cannot apply requested modem config - falling back to %s defaults",
+            } else {
+                LOG_WARN("Invalid LoRa config settings, cannot apply requested modem config - falling back to %s defaults",
                      newRegion->name);
             clampConfigLora(loraConfig);
         }
@@ -1285,6 +1301,8 @@ void RadioInterface::applyModemConfig()
         sf = loraConfig.spread_factor;
         cr = loraConfig.coding_rate;
     }
+
+    saveModemPreset(loraConfig.modem_preset);
 
     power = loraConfig.tx_power;
 

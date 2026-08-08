@@ -240,6 +240,11 @@ class RadioInterface
     [[nodiscard]] uint32_t getChannelNum();
 
     /**
+     * Get the modem preset we saved.
+     */
+    meshtastic_Config_LoRaConfig_ModemPreset getModemPreset();
+
+    /**
      * Get the frequency we saved.
      */
     [[nodiscard]] virtual float getFreq();
@@ -279,8 +284,9 @@ class RadioInterface
   protected:
     int8_t power = 17; // Set by applyModemConfig()
 
-    float savedFreq;
-    uint32_t savedChannelNum;
+    float savedFreq = 0.0f;
+    uint32_t savedChannelNum = 0;
+    meshtastic_Config_LoRaConfig_ModemPreset savedModemPreset;
 
     /***
      * given a packet set sendingPacket and decode the protobufs into radiobuf.  Returns # of bytes to send (including the
@@ -305,6 +311,11 @@ class RadioInterface
      * Save the channel we selected for later reuse.
      */
     virtual void saveChannelNum(uint32_t savedChannelNum);
+
+    /**
+     * Save the modem preset we selected for later reuse.
+     */
+    virtual void saveModemPreset(meshtastic_Config_LoRaConfig_ModemPreset savedPreset);
 
     /**
      * Get current RSSI reading from the radio.

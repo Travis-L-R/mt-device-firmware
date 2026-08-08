@@ -420,6 +420,13 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
         }
     }
 
+    // when using client_late, abort sending if it's not from us and utilization is high enough
+    if (config.device.role == meshtastic_Config_DeviceConfig_Role_CLIENT_LATE && !isFromUs(p) &&
+        !(airTime->isTxAllowedChannelUtil(true) && airTime->isTxAllowedAirUtil())) {
+        packetPool.release(p);
+        return meshtastic_Routing_Error_NONE; // PR-TODO: see if this error is actually suitable or not
+    }
+
     // PacketId nakId = p->decoded.which_ackVariant == SubPacket_fail_id_tag ? p->decoded.ackVariant.fail_id : 0;
     // assert(!nakId); // I don't think we ever send 0hop naks over the wire (other than to the phone), test that assumption with
     // assert
@@ -432,8 +439,10 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     // the lora we need to make sure we have replaced it with our local address
     p->from = getFrom(p);
 
-    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // set the relayer to us
-
+    if (config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
+        p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // set the relayer to us (unless using client_late)
+    }
+    
 #if HAS_VARIABLE_HOPS
     // Apply HopScaling hop recommendation to routine outgoing broadcasts
     if (isFromUs(p) && isBroadcast(p->to) && hopScalingModule && p->which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
