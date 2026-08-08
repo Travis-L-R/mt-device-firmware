@@ -19,7 +19,9 @@ FloodingRouter::FloodingRouter() {}
 ErrorCode FloodingRouter::send(meshtastic_MeshPacket *p)
 {
     // Add any messages _we_ send to the seen message list (so we will ignore all retransmissions we see)
-    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us
+    if (config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
+        p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us (unless using client_late)
+    }
     wasSeenRecently(p);                                         // FIXME, move this to a sniffSent method
 
     return Router::send(p);
@@ -52,7 +54,7 @@ bool FloodingRouter::shouldFilterReceived(const meshtastic_MeshPacket *p)
             // Check if it's still in the Tx queue, if not, we have to relay it again
             if (!findInTxQueue(p->from, p->id)) {
                 if (reprocessPacket(p))
-                    perhapsRebroadcast(p);
+                perhapsRebroadcast(p);
             }
         } else {
             perhapsCancelDupe(p);
@@ -142,7 +144,7 @@ void FloodingRouter::perhapsCancelDupe(const meshtastic_MeshPacket *p)
         if (Router::cancelSending(p->from, p->id))
             txRelayCanceled++;
     }
-    if (config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE && iface) {
+    if ((config.device.role == meshtastic_Config_DeviceConfig_Role_ROUTER_LATE || config.device.role == meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) && iface) {
         iface->clampToLateRebroadcastWindow(getFrom(p), p->id);
     }
     if (config.device.role == meshtastic_Config_DeviceConfig_Role_CLIENT_BASE && iface && nodeDB &&

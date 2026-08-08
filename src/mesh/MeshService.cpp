@@ -142,12 +142,12 @@ void MeshService::reloadConfig(int saveWhat)
     // module config, device state, or the node database (e.g. favoriting a node) have no reason
     // to re-init the LoRa chip - skip it there to avoid an unnecessary and risky SPI reconfigure.
     if (saveWhat & (SEGMENT_CONFIG | SEGMENT_CHANNELS)) {
-        // If we can successfully set this radio to these settings, save them to disk
+    // If we can successfully set this radio to these settings, save them to disk
 
-        // This will also update the region as needed
-        nodeDB->resetRadioConfig(); // Don't let the phone send us fatally bad settings
+    // This will also update the region as needed
+    nodeDB->resetRadioConfig(); // Don't let the phone send us fatally bad settings
 
-        configChanged.notifyObservers(NULL); // This will cause radio hardware to change freqs etc
+    configChanged.notifyObservers(NULL); // This will cause radio hardware to change freqs etc
     }
     nodeDB->saveToDisk(saveWhat);
 }
@@ -284,9 +284,17 @@ void MeshService::handleToRadio(meshtastic_MeshPacket &p)
         return;
     }
 #endif
+
+#if !USERPREFS_ALLOW_NODENUM_ASSIGNMENT
     p.from = 0;                          // We don't let clients assign nodenums to their sent messages
     p.next_hop = NO_NEXT_HOP_PREFERENCE; // We don't let clients assign next_hop to their sent messages
     p.relay_node = NO_RELAY_NODE;        // We don't let clients assign relay_node to their sent messages
+#else
+    // We do let phones assign nodenums, but if it's "from" us it should be set to zero because bits expect it to be zero when it is from us (e.g. AdminModule)
+    if (p.from == nodeDB->getNodeNum()) {
+        p.from = 0;
+    }
+#endif
 
     if (p.id == 0)
         p.id = generatePacketId(); // If the phone didn't supply one, then pick one
@@ -384,7 +392,7 @@ void MeshService::sendToMesh(meshtastic_MeshPacket *p, RxSource src, bool ccToPh
         DEBUG_HEAP_AFTER("MeshService::sendToMesh", a);
 
         if (a)
-            sendToPhone(a);
+        sendToPhone(a);
     }
 
     // Router may ask us to release the packet if it wasn't sent

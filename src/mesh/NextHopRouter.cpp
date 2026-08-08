@@ -63,7 +63,9 @@ PendingPacket::PendingPacket(meshtastic_MeshPacket *p, uint8_t numRetransmission
 ErrorCode NextHopRouter::send(meshtastic_MeshPacket *p)
 {
     // Add any messages _we_ send to the seen message list (so we will ignore all retransmissions we see)
-    p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us
+    if (config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_LATE) {
+        p->relay_node = nodeDB->getLastByteOfNodeNum(getNodeNum()); // First set the relayer to us (unless using client_late)
+    }
     wasSeenRecently(p);                                         // FIXME, move this to a sniffSent method
 
     p->next_hop = getNextHop(p->to, p->relay_node).value_or(NO_NEXT_HOP_PREFERENCE); // set the next hop
@@ -106,7 +108,7 @@ bool NextHopRouter::shouldFilterReceived(const meshtastic_MeshPacket *p)
             // Check if it's still in the Tx queue, if not, we have to relay it again
             if (!findInTxQueue(p->from, p->id)) {
                 if (reprocessPacket(p))
-                    perhapsRebroadcast(p);
+                perhapsRebroadcast(p);
             }
         } else {
             bool isRepeated = getHopsAway(*p) == 0;
@@ -139,16 +141,16 @@ void NextHopRouter::sniffReceived(const meshtastic_MeshPacket *p, const meshtast
         // destination
         if (p->from != 0) {
             meshtastic_NodeInfoLite *origTx = nodeDB->getMeshNode(p->from);
-            // Either relayer of ACK was also a relayer of the packet, or we were the *only* relayer and the ACK came
+                // Either relayer of ACK was also a relayer of the packet, or we were the *only* relayer and the ACK came
             // directly from the destination. checkRelayers is read-only on PacketHistory and O(1), so we run it even
             // when origTx is absent - that lets us still capture the confirmed hop into the TMM overflow cache below.
             // Single lookup for both relayer checks on the same (request_id, to) pair
             bool wasAlreadyRelayer = false;
-            bool weWereSoleRelayer = false;
+                bool weWereSoleRelayer = false;
             bool weWereRelayer = false;
             checkRelayers(p->relay_node, ourRelayID, p->decoded.request_id, p->to, &wasAlreadyRelayer, &weWereRelayer,
                           &weWereSoleRelayer);
-            if ((weWereRelayer && wasAlreadyRelayer) || (getHopsAway(*p) == 0 && weWereSoleRelayer)) {
+                if ((weWereRelayer && wasAlreadyRelayer) || (getHopsAway(*p) == 0 && weWereSoleRelayer)) {
                 // M1/M2: only learn a next hop whose last byte maps to a single plausible relay. On a dense
                 // mesh the byte may be ambiguous; storing it would aim future DMs at the wrong node. This gate
                 // now protects BOTH the hot-store route (NodeInfoLite.next_hop) AND the TMM overflow cache -
@@ -221,7 +223,7 @@ bool NextHopRouter::perhapsRebroadcast(const meshtastic_MeshPacket *p)
                         tosend->hop_limit = 0;
                         LOG_INFO("Traffic management: exhausting hops for 0x%08x, setting hop_limit=0", getFrom(p));
                     } else if (shouldDecrementHopLimit(p)) {
-                        // Use shared logic to determine if hop_limit should be decremented
+                    // Use shared logic to determine if hop_limit should be decremented
                         tosend->hop_limit--; // bump down the hop count
                     } else {
                         LOG_INFO("favorite-ROUTER/CLIENT_BASE-to-ROUTER/CLIENT_BASE rebroadcast: preserving hop_limit");
@@ -280,7 +282,7 @@ std::optional<uint8_t> NextHopRouter::getNextHop(NodeNum to, uint8_t relay_node)
             // unicast into a void. In both cases flood instead (managed flooding still delivers).
             ResolvedNode r = nodeDB->resolveLastByte(node->next_hop, /*requireDirectNeighbor=*/true);
             if (r.status == LastByteResolution::Unique)
-                return node->next_hop;
+            return node->next_hop;
             LOG_WARN("Next hop 0x%x for 0x%08x %s; set no pref", node->next_hop, to,
                      r.status == LastByteResolution::Ambiguous ? "ambiguous among neighbors" : "not a known neighbor");
         } else

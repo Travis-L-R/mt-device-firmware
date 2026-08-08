@@ -636,8 +636,8 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                state = STATE_SEND_OTHER_NODEINFOS;
-                onNowHasData(0);
+            state = STATE_SEND_OTHER_NODEINFOS;
+            onNowHasData(0);
             }
         } else {
             state = STATE_SEND_METADATA;
@@ -689,7 +689,7 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
         } else
 #endif
         {
-            fromRadioScratch.channel = channels.getByIndex(config_state);
+        fromRadioScratch.channel = channels.getByIndex(config_state);
         }
         config_state++;
         // Advance when we have sent all of our Channels
@@ -729,7 +729,7 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                fromRadioScratch.config.payload_variant.network = config.network;
+            fromRadioScratch.config.payload_variant.network = config.network;
             }
             break;
         case meshtastic_Config_display_tag:
@@ -760,7 +760,7 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                fromRadioScratch.config.payload_variant.lora = config.lora;
+            fromRadioScratch.config.payload_variant.lora = config.lora;
             }
             break;
         case meshtastic_Config_bluetooth_tag:
@@ -790,7 +790,7 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                fromRadioScratch.config.payload_variant.security = config.security;
+            fromRadioScratch.config.payload_variant.security = config.security;
             }
             break;
         case meshtastic_Config_sessionkey_tag:
@@ -799,6 +799,11 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             break;
         case meshtastic_Config_device_ui_tag: // NOOP!
             fromRadioScratch.config.which_payload_variant = meshtastic_Config_device_ui_tag;
+            break;
+        case meshtastic_Config_destinations_tag:
+            LOG_DEBUG("Send config: destinations");
+            fromRadioScratch.config.which_payload_variant = meshtastic_Config_destinations_tag;
+            fromRadioScratch.config.payload_variant.destinations = config.destinations;
             break;
         default:
             LOG_ERROR("Unknown config type %d", config_state);
@@ -830,7 +835,7 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                fromRadioScratch.moduleConfig.payload_variant.mqtt = moduleConfig.mqtt;
+            fromRadioScratch.moduleConfig.payload_variant.mqtt = moduleConfig.mqtt;
             }
             break;
         case meshtastic_ModuleConfig_serial_tag:
@@ -938,15 +943,15 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
                 state = STATE_SEND_COMPLETE_ID;
             } else
 #endif
-                // Handle special nonce behaviors:
-                // - SPECIAL_NONCE_ONLY_CONFIG: Skip node info, go directly to file manifest
-                // - SPECIAL_NONCE_ONLY_NODES: After sending nodes, skip to complete
-                if (config_nonce == SPECIAL_NONCE_ONLY_CONFIG) {
-                    state = STATE_SEND_FILEMANIFEST;
-                } else {
-                    state = STATE_SEND_OTHER_NODEINFOS;
-                    onNowHasData(0);
-                }
+            // Handle special nonce behaviors:
+            // - SPECIAL_NONCE_ONLY_CONFIG: Skip node info, go directly to file manifest
+            // - SPECIAL_NONCE_ONLY_NODES: After sending nodes, skip to complete
+            if (config_nonce == SPECIAL_NONCE_ONLY_CONFIG) {
+                state = STATE_SEND_FILEMANIFEST;
+            } else {
+                state = STATE_SEND_OTHER_NODEINFOS;
+                onNowHasData(0);
+            }
             config_state = 0;
         }
         break;
@@ -1025,9 +1030,9 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                fromRadioScratch.which_payload_variant = meshtastic_FromRadio_mqttClientProxyMessage_tag;
-                fromRadioScratch.mqttClientProxyMessage = *mqttClientProxyMessageForPhone;
-                releaseMqttClientProxyPhonePacket();
+            fromRadioScratch.which_payload_variant = meshtastic_FromRadio_mqttClientProxyMessage_tag;
+            fromRadioScratch.mqttClientProxyMessage = *mqttClientProxyMessageForPhone;
+            releaseMqttClientProxyPhonePacket();
             }
         } else if (xmodemPacketForPhone.control != meshtastic_XModem_Control_NUL) {
 #ifdef MESHTASTIC_PHONEAPI_ACCESS_CONTROL
@@ -1036,9 +1041,9 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                fromRadioScratch.which_payload_variant = meshtastic_FromRadio_xmodemPacket_tag;
-                fromRadioScratch.xmodemPacket = xmodemPacketForPhone;
-                xmodemPacketForPhone = meshtastic_XModem_init_zero;
+            fromRadioScratch.which_payload_variant = meshtastic_FromRadio_xmodemPacket_tag;
+            fromRadioScratch.xmodemPacket = xmodemPacketForPhone;
+            xmodemPacketForPhone = meshtastic_XModem_init_zero;
             }
 #ifdef MESHTASTIC_PHONEAPI_ACCESS_CONTROL
         } else if (hasPendingLockdownStatus()) {
@@ -1065,11 +1070,11 @@ size_t PhoneAPI::getFromRadio(uint8_t *buf)
             } else
 #endif
             {
-                printPacket("phone downloaded packet", packetForPhone);
-                // Encapsulate as a FromRadio packet
-                fromRadioScratch.which_payload_variant = meshtastic_FromRadio_packet_tag;
-                fromRadioScratch.packet = *packetForPhone;
-                releasePhonePacket();
+            printPacket("phone downloaded packet", packetForPhone);
+            // Encapsulate as a FromRadio packet
+            fromRadioScratch.which_payload_variant = meshtastic_FromRadio_packet_tag;
+            fromRadioScratch.packet = *packetForPhone;
+            releasePhonePacket();
             }
         } else if (replayPending()) {
             // No live packet pending - feed the phone one cached satellite-DB packet.
@@ -1821,14 +1826,16 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
             LOG_DEBUG("Ignore packet from phone, already seen recently");
             return false;
         }
-
+    
     if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && lastPortNumToRadio[p.decoded.portnum] &&
         Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], THIRTY_SECONDS_MS)) {
+#if !USERPREFS_DISABLE_TRACEROUTE_THROTTLE
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
         sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "TraceRoute can only be sent once every 30 seconds");
         meshtastic_QueueStatus qs = router->getQueueStatus();
         service->sendQueueStatusToPhone(qs, 0, p.id);
         return false;
+#endif
     } else if (p.decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP && isBroadcast(p.to) && p.hop_limit > 0) {
         sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "Multi-hop traceroute to broadcast address is not allowed");
         meshtastic_QueueStatus qs = router->getQueueStatus();
@@ -1838,6 +1845,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
                          meshtastic_PortNum_ALERT_APP, meshtastic_PortNum_TELEMETRY_APP) &&
                lastPortNumToRadio[p.decoded.portnum] &&
                Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], TEN_SECONDS_MS)) {
+#if !USERPREFS_DISABLE_POSITION_THROTTLE
         // TODO: [Issue #6700] Make this rate limit throttling scale up / down with the preset
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
         meshtastic_QueueStatus qs = router->getQueueStatus();
@@ -1845,6 +1853,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
         // FIXME: Figure out why this continues to happen
         // sendNotification(meshtastic_LogRecord_Level_WARNING, p.id, "Position can only be sent once every 5 seconds");
         return false;
+#endif
     } else if (p.decoded.portnum == meshtastic_PortNum_TEXT_MESSAGE_APP && lastPortNumToRadio[p.decoded.portnum] &&
                Throttle::isWithinTimespanMs(lastPortNumToRadio[p.decoded.portnum], TWO_SECONDS_MS)) {
         LOG_WARN("Rate limit portnum %d", p.decoded.portnum);
@@ -1866,7 +1875,7 @@ bool PhoneAPI::handleToRadioPacket(meshtastic_MeshPacket &p)
     if (IS_ONE_OF(p.decoded.portnum, meshtastic_PortNum_TRACEROUTE_APP, meshtastic_PortNum_POSITION_APP,
                   meshtastic_PortNum_WAYPOINT_APP, meshtastic_PortNum_ALERT_APP, meshtastic_PortNum_TELEMETRY_APP,
                   meshtastic_PortNum_TEXT_MESSAGE_APP))
-        lastPortNumToRadio[p.decoded.portnum] = millis();
+    lastPortNumToRadio[p.decoded.portnum] = millis();
     service->handleToRadio(p);
     return true;
 }

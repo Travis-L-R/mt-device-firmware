@@ -199,19 +199,19 @@ bool meshtastic_NodeDatabase_callback(pb_istream_t *istream, pb_ostream_t *ostre
     const auto *iter = reinterpret_cast<const pb_field_iter_t *>(field);
     switch (iter->tag) {
     case meshtastic_NodeDatabase_nodes_tag: {
-        if (ostream) {
+    if (ostream) {
             const auto *vec = static_cast<const std::vector<meshtastic_NodeInfoLite> *>(iter->pData);
-            for (auto item : *vec) {
+        for (auto item : *vec) {
                 // Round rather than truncate: truncation wiped any |SNR| < 0.25 dB to exactly
                 // 0, which collided with the "never stored" sentinel below.
                 item.snr_q4 = (int32_t)lroundf(item.snr * 4.0f);
                 item.snr = 0.0f;
                 if (!pb_encode_tag_for_field(ostream, iter))
-                    return false;
+                return false;
                 if (!pb_encode_submessage(ostream, meshtastic_NodeInfoLite_fields, &item))
                     return false;
-            }
         }
+    }
         if (istream && istream->bytes_left) {
             meshtastic_NodeInfoLite node = meshtastic_NodeInfoLite_init_zero;
             auto *vec = static_cast<std::vector<meshtastic_NodeInfoLite> *>(iter->pData);
@@ -225,11 +225,11 @@ bool meshtastic_NodeDatabase_callback(pb_istream_t *istream, pb_ostream_t *ostre
                     node.snr = node.snr_q4 / 4.0f;
                 }
                 node.snr_q4 = 0;
-                vec->push_back(node);
-            }
-        }
-        return true;
+            vec->push_back(node);
     }
+        }
+    return true;
+}
     case meshtastic_NodeDatabase_positions_tag: {
         if (ostream) {
             const auto *vec = static_cast<const std::vector<meshtastic_NodePositionEntry> *>(iter->pData);
@@ -859,6 +859,7 @@ void NodeDB::installDefaultConfig(bool preserveKey = false)
     config.has_network = true;
     config.has_bluetooth = (HAS_BLUETOOTH ? true : false);
     config.has_security = true;
+    config.has_destinations = true;
     config.device.rebroadcast_mode = meshtastic_Config_DeviceConfig_RebroadcastMode_ALL;
 
     config.lora.sx126x_rx_boosted_gain = true;
@@ -1332,7 +1333,12 @@ void NodeDB::installDefaultModuleConfig()
 #endif
 
     moduleConfig.has_neighbor_info = true;
+#if !USERPREFS_ENABLE_NEIGHBOR_INFO_BY_DEFAULT
     moduleConfig.neighbor_info.enabled = false;
+#else
+    moduleConfig.neighbor_info.enabled = true;
+    moduleConfig.neighbor_info.transmit_over_lora = true;
+#endif
 
     installTrafficManagementDefaults(moduleConfig);
 
@@ -2365,7 +2371,7 @@ void NodeDB::loadFromDisk()
         if (migrateLegacyNodeDatabase())
             migrationSavePending = true;
         else
-            installDefaultNodeDatabase();
+        installDefaultNodeDatabase();
     } else {
         meshNodes = &nodeDatabase.nodes;
         numMeshNodes = nodeDatabase.nodes.size();
@@ -2472,7 +2478,7 @@ void NodeDB::loadFromDisk()
             state = LoadFileResult::LOAD_SUCCESS;
             initializedEventConfig = true;
             LOG_INFO("Initialized event config without modifying %s", STANDARD_CONFIG_FILE_NAME);
-        } else {
+    } else {
             // Keep the event load outcome because loadProto() clears config before decoding.
             // A normal decode failure must not create a replacement identity.
             state = standardConfigState == LoadFileResult::DECODE_FAILED ? LoadFileResult::DECODE_FAILED : eventConfigState;
@@ -2495,11 +2501,11 @@ void NodeDB::loadFromDisk()
         // / NO_FILESYSTEM). Unlike DECODE_FAILED there are no usable contents to protect, so install defaults.
         installDefaultConfig();
     } else if (config.version < DEVICESTATE_MIN_VER) {
-        LOG_WARN("config %d is old, discard", config.version);
-        installDefaultConfig(true);
-    } else {
-        LOG_INFO("Loaded saved config version %d", config.version);
-    }
+            LOG_WARN("config %d is old, discard", config.version);
+            installDefaultConfig(true);
+        } else {
+            LOG_INFO("Loaded saved config version %d", config.version);
+        }
     configLoadComplete = true;
 
     // Coerce LoRa config fields derived from presets while bootstrapping.
@@ -3162,6 +3168,7 @@ bool NodeDB::saveToDiskNoRetry(int saveWhat)
         config.has_network = true;
         config.has_bluetooth = true;
         config.has_security = true;
+        config.has_destinations = true;
 
         success &= saveProto(configFileName, meshtastic_LocalConfig_size, &meshtastic_LocalConfig_msg, &config);
     }
@@ -3371,36 +3378,36 @@ void NodeDB::updatePosition(uint32_t nodeId, const meshtastic_Position &p, RxSou
         evictSatelliteOverCap(*this, nodePositions, nodeId);
         meshtastic_PositionLite &slot = nodePositions[nodeId]; // creates default-zero entry if missing
 
-        if (src == RX_SRC_LOCAL) {
-            // Local packet, fully authoritative
-            LOG_INFO("updatePosition LOCAL pos@%x time=%u lat=%d lon=%d alt=%d", p.timestamp, p.time, p.latitude_i, p.longitude_i,
-                     p.altitude);
+    if (src == RX_SRC_LOCAL) {
+        // Local packet, fully authoritative
+        LOG_INFO("updatePosition LOCAL pos@%x time=%u lat=%d lon=%d alt=%d", p.timestamp, p.time, p.latitude_i, p.longitude_i,
+                 p.altitude);
 
-            setLocalPosition(p);
+        setLocalPosition(p);
             slot = TypeConversions::ConvertToPositionLite(p);
-        } else if ((p.time > 0) && !p.latitude_i && !p.longitude_i && !p.timestamp && !p.location_source) {
-            // FIXME SPECIAL TIME SETTING PACKET FROM EUD TO RADIO
-            // (stop-gap fix for issue #900)
-            LOG_DEBUG("updatePosition SPECIAL time setting time=%u", p.time);
+    } else if ((p.time > 0) && !p.latitude_i && !p.longitude_i && !p.timestamp && !p.location_source) {
+        // FIXME SPECIAL TIME SETTING PACKET FROM EUD TO RADIO
+        // (stop-gap fix for issue #900)
+        LOG_DEBUG("updatePosition SPECIAL time setting time=%u", p.time);
             slot.time = p.time;
-        } else {
-            // Be careful to only update fields that have been set by the REMOTE sender
-            // A lot of position reports don't have time populated.  In that case, be careful to not blow away the time we
-            // recorded based on the packet rxTime
-            //
-            // FIXME perhaps handle RX_SRC_USER separately?
+    } else {
+        // Be careful to only update fields that have been set by the REMOTE sender
+        // A lot of position reports don't have time populated.  In that case, be careful to not blow away the time we
+        // recorded based on the packet rxTime
+        //
+        // FIXME perhaps handle RX_SRC_USER separately?
             LOG_INFO("updatePosition REMOTE node=0x%08x time=%u lat=%d lon=%d", nodeId, p.time, p.latitude_i, p.longitude_i);
 
-            // First, back up fields that we want to protect from overwrite
+        // First, back up fields that we want to protect from overwrite
             uint32_t tmp_time = slot.time;
 
-            // Next, update atomically
+        // Next, update atomically
             slot = TypeConversions::ConvertToPositionLite(p);
 
-            // Last, restore any fields that may have been overwritten
+        // Last, restore any fields that may have been overwritten
             if (!slot.time)
                 slot.time = tmp_time;
-        }
+    }
     }
     updateGUIforNode = info;
     notifyObservers(true); // Force an update whether or not our node counts have changed
@@ -3431,11 +3438,11 @@ void NodeDB::updateTelemetry(uint32_t nodeId, const meshtastic_Telemetry &t, RxS
 #endif
 
     } else if (t.which_variant == meshtastic_Telemetry_environment_metrics_tag) {
-        if (src == RX_SRC_LOCAL) {
+    if (src == RX_SRC_LOCAL) {
             LOG_DEBUG("updateTelemetry LOCAL env");
-        } else {
+    } else {
             LOG_DEBUG("updateTelemetry REMOTE env node=0x%08x", nodeId);
-        }
+    }
 #if !MESHTASTIC_EXCLUDE_ENVIRONMENTDB
         concurrency::LockGuard guard(&satelliteMutex);
         evictSatelliteOverCap(*this, nodeEnvironment, nodeId);
@@ -3553,10 +3560,10 @@ bool NodeDB::updateUser(uint32_t nodeId, meshtastic_User &p, uint8_t channelInde
                 LOG_WARN(warning, safeName);
                 meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
                 if (cn) {
-                    cn->level = meshtastic_LogRecord_Level_WARNING;
-                    cn->time = getValidTime(RTCQualityFromNet);
+                cn->level = meshtastic_LogRecord_Level_WARNING;
+                cn->time = getValidTime(RTCQualityFromNet);
                     snprintf(cn->message, sizeof(cn->message), warning, safeName);
-                    service->sendClientNotification(cn);
+                service->sendClientNotification(cn);
                 }
             }
             return false;
@@ -4254,7 +4261,7 @@ bool NodeDB::generateCryptoKeyPair(const uint8_t *privateKey)
         } else {
             LOG_ERROR("Failed to generate public key from provided private key");
             return false;
-        }
+}
     }
     // Try to regenerate public key from existing private key if it's valid and not low entropy
     else if (config.security.private_key.size == 32 && !keyIsLowEntropy) {

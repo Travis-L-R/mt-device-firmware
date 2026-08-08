@@ -5,6 +5,7 @@
 #include "ServiceEnvelope.h"
 #include "configuration.h"
 #include "main.h"
+#include "DisplayFormatters.h"
 #include "mesh/Channels.h"
 #include "mesh/CryptoEngine.h"
 #include "mesh/Router.h"
@@ -171,7 +172,9 @@ inline void onReceiveProto(char *topic, byte *payload, size_t length)
             return;
         }
         p->channel = ch.index;
-#if !(MESHTASTIC_EXCLUDE_PKI) && !(MESHTASTIC_EXCLUDE_XEDDSA)
+
+#if !USERPREFS_UPLINK_ALL_PACKETS
+#if !(MESHTASTIC_EXCLUDE_PKI) && !(MESHTASTIC_EXCLUDE_XEDDSA) 
         // Already-decoded downlink skips perhapsDecode's crypto path entirely, so enforce the
         // signature policy here: verify a carried signature and apply unsigned-downgrade
         // protection for known signers. Without this, a peer on a plaintext broker could
@@ -195,6 +198,7 @@ inline void onReceiveProto(char *topic, byte *payload, size_t length)
             router->enqueueReceivedMessage(p.release());
     } else if (router && passesRoutingAuthGate(p.get()) == RoutingAuthVerdict::ACCEPT)
         router->enqueueReceivedMessage(p.release());
+#endif
 }
 
 /// Determines if the given IPAddress is a private IPv4 address, i.e. not routable on the public internet.
@@ -340,7 +344,7 @@ void MQTT::onClientProxyReceive(meshtastic_MqttClientProxyMessage msg)
     // string, so reading it unconditionally let a client name any length up to PB_SIZE_MAX.
     switch (msg.which_payload_variant) {
     case meshtastic_MqttClientProxyMessage_data_tag:
-        onReceive(msg.topic, msg.payload_variant.data.bytes, msg.payload_variant.data.size);
+    onReceive(msg.topic, msg.payload_variant.data.bytes, msg.payload_variant.data.size);
         break;
     case meshtastic_MqttClientProxyMessage_text_tag:
         onReceive(msg.topic, (byte *)msg.payload_variant.text,
@@ -527,7 +531,7 @@ void MQTT::reconnect()
 #else
                 needReconnect = true;
                 if (wifiReconnect) {
-                    wifiReconnect->setIntervalFromNow(0);
+                wifiReconnect->setIntervalFromNow(0);
                 } else {
                     LOG_WARN("MQTT connect failed repeatedly, but WiFi reconnect is unavailable");
                 }
@@ -648,11 +652,11 @@ bool MQTT::isValidConfig(const meshtastic_ModuleConfig_MQTTConfig &config, MQTTC
 #ifndef PIO_UNIT_TESTING
         meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
         if (cn) {
-            cn->level = meshtastic_LogRecord_Level_ERROR;
-            cn->time = getValidTime(RTCQualityFromNet);
-            strncpy(cn->message, warning, sizeof(cn->message) - 1);
-            cn->message[sizeof(cn->message) - 1] = '\0'; // Ensure null termination
-            service->sendClientNotification(cn);
+        cn->level = meshtastic_LogRecord_Level_ERROR;
+        cn->time = getValidTime(RTCQualityFromNet);
+        strncpy(cn->message, warning, sizeof(cn->message) - 1);
+        cn->message[sizeof(cn->message) - 1] = '\0'; // Ensure null termination
+        service->sendClientNotification(cn);
         }
 #endif
         return false;
@@ -666,11 +670,11 @@ bool MQTT::isValidConfig(const meshtastic_ModuleConfig_MQTTConfig &config, MQTTC
 #ifndef PIO_UNIT_TESTING
         meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
         if (cn) {
-            cn->level = meshtastic_LogRecord_Level_ERROR;
-            cn->time = getValidTime(RTCQualityFromNet);
-            strncpy(cn->message, warning, sizeof(cn->message) - 1);
-            cn->message[sizeof(cn->message) - 1] = '\0'; // Ensure null termination
-            service->sendClientNotification(cn);
+        cn->level = meshtastic_LogRecord_Level_ERROR;
+        cn->time = getValidTime(RTCQualityFromNet);
+        strncpy(cn->message, warning, sizeof(cn->message) - 1);
+        cn->message[sizeof(cn->message) - 1] = '\0'; // Ensure null termination
+        service->sendClientNotification(cn);
         }
 #endif
         return false;
@@ -700,6 +704,8 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
 {
     if (mp_encrypted.via_mqtt)
         return; // Don't send messages that came from MQTT back into MQTT
+
+#if !USERPREFS_UPLINK_ALL_CHANNELS
     bool uplinkEnabled = false;
     for (int i = 0; i <= 7; i++) {
         if (channels.getByIndex(i).settings.uplink_enabled)
@@ -707,12 +713,19 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     }
     if (!uplinkEnabled)
         return; // no channels have an uplink enabled
+#endif
     auto &ch = channels.getByIndex(chIndex);
 
     // mp_decoded will not be decoded when it's PKI encrypted and not directed to us
     if (mp_decoded.which_payload_variant == meshtastic_MeshPacket_decoded_tag) {
         // For uplinking other's packets, check if it's not OK to MQTT or if it's an older packet without the bitfield
         bool dontUplink = !mp_decoded.decoded.has_bitfield || !(mp_decoded.decoded.bitfield & BITFIELD_OK_TO_MQTT_MASK);
+
+#if USERPREFS_TRANSGRESS_OK_TO_MQTT
+        // Ignore OK_TO_MQTT mask, except for the default server
+        dontUplink &= isConfiguredForDefaultServer;
+#endif
+
         // Respect the DontMqttMeBro flag for other nodes' packets on public MQTT servers
         if (!isFromUs(&mp_decoded) && !isMqttServerAddressPrivate && dontUplink) {
             LOG_INFO("MQTT onSend - Not forwarding packet due to DontMqttMeBro flag");
@@ -727,10 +740,26 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     }
     // Either encrypted packet (we couldn't decrypt) is marked as pki_encrypted, or we could decode the PKI encrypted packet
     bool isPKIEncrypted = mp_encrypted.pki_encrypted || mp_decoded.pki_encrypted;
+
+#if !USERPREFS_UPLINK_ALL_CHANNELS
     // If it was to a channel, check uplink enabled, else must be pki_encrypted
     if (!(ch.settings.uplink_enabled || isPKIEncrypted))
         return;
+#else
+    // Do not uplink unless uplink is enabled on the channel, we don't know the channel (ch.index set to -1), or it was pki_encrypted
+    // This allows devices with UPLINK_ALL_CHANNELS set to still have channels with uplink disabled (or to disable all uplinks by having none enabled)
+    if (!(ch.settings.uplink_enabled || (ch.index == -1 && uplinkEnabled)|| isPKIEncrypted))
+        return;
+#endif
+
+#if !USERPREFS_UPLINK_ALL_CHANNELS
     const char *channelId = isPKIEncrypted ? "PKI" : channels.getGlobalId(chIndex);
+#else
+    //Lookup channelID for MQTT topic.
+    //Use "PKI" if couldn't decrypt, use "Unknown" if we could decrypt but we don't have the channel in our device, or we couldn't decrypt but it wasn't PKI.
+    const char *channelId = isPKIEncrypted ? "PKI" : (ch.index == -1 ? "Unknown" : channels.getGlobalId(chIndex));
+#endif
+
 
     LOG_DEBUG("MQTT onSend - Publish ");
     const meshtastic_MeshPacket *p;
@@ -752,11 +781,32 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
                                             .channel_id = const_cast<char *>(channelId),
                                             .gateway_id = const_cast<char *>(nodeId.c_str())};
     size_t numBytes = pb_encode_to_bytes(bytes, sizeof(bytes), &meshtastic_ServiceEnvelope_msg, &env);
-    std::string topic = cryptTopic + channelId + "/" + nodeId;
+
+    RadioInterface *iface = router->getInterface();
+    uint8_t frequencySlotNum = iface->getChannelNum();
+    std::string topic = cryptTopic + 
+        DisplayFormatters::getModemPresetDisplayName(iface->getModemPreset(), false, iface->getModemPreset() != meshtastic_Config_LoRaConfig_ModemPreset_NO_PRESET) + "/" + 
+        std::to_string(frequencySlotNum == 0 ? frequencySlotNum : frequencySlotNum + 1) + "/" + 
+        channelId + "/" + nodeId;
 
     if (moduleConfig.mqtt.proxy_to_client_enabled || this->isConnectedDirectly()) {
         LOG_DEBUG("MQTT Publish %s, %u bytes", topic.c_str(), numBytes);
         publish(topic.c_str(), bytes, numBytes, false);
+
+#if !defined(ARCH_NRF52) ||                                                                                                      \
+    defined(NRF52_USE_JSON) // JSON is not supported on nRF52, see issue #2804 ### Fixed by using ArduinoJson ###
+        if (!moduleConfig.mqtt.json_enabled)
+            return;
+        // handle json topic
+        auto jsonString = MeshPacketSerializer::JsonSerialize(&mp_decoded);
+        if (jsonString.length() == 0)
+            return;
+        // Generate node ID from nodenum for JSON topic
+        std::string nodeIdForJson = nodeDB->getNodeId();
+        std::string topicJson = jsonTopic + channelId + "/" + nodeIdForJson;
+        LOG_INFO("JSON publish message to %s, %u bytes: %s", topicJson.c_str(), jsonString.length(), jsonString.c_str());
+        publish(topicJson.c_str(), jsonString.c_str(), false);
+#endif // ARCH_NRF52 NRF52_USE_JSON
     } else {
         LOG_INFO("MQTT not connected, queue packet");
         QueueEntry *entry;
@@ -806,7 +856,7 @@ void MQTT::perhapsReportToMap()
         return;
     mp->which_payload_variant = meshtastic_MeshPacket_decoded_tag;
     mp->from = nodeDB->getNodeNum();
-    mp->to = NODENUM_BROADCAST;
+    mp->to = NODENUM_PLACEHOLDER;
     mp->decoded.portnum = meshtastic_PortNum_MAP_REPORT_APP;
 
     // Fill MapReport message
