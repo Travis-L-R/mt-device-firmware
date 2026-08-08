@@ -142,6 +142,29 @@ void resetRoutingAuthEvaluationCount()
 }
 #endif
 
+/** Attempt to find a node number among our configured destinations */
+meshtastic_Config_DestinationsConfig_MeshDestination *Router::findDestinationForAddress(uint32_t n, bool leap_only, uint32_t leap_mask)
+{
+    // Disregard reserved addresses
+    if (n < NUM_RESERVED) {
+        return nullptr;
+    }
+
+    meshtastic_Config_DestinationsConfig_MeshDestination *dest = nullptr;
+
+    // Loop through, try to find a destination
+    for (uint16_t i = 0; i < config.destinations.destinations_count; i++) {
+        dest = &config.destinations.destinations[i];
+
+        // if we have a match, finish and return the index as
+        if (n == dest->num) {
+            LOG_DEBUG("Set found destination for node 0x%x at %u", n, i);
+            return dest;
+        }
+    }
+    return nullptr;
+}
+
 /**
  * Constructor
  *
@@ -291,7 +314,7 @@ meshtastic_MeshPacket *Router::allocForSending()
 
     p->which_payload_variant = meshtastic_MeshPacket_decoded_tag; // Assume payload is decoded at start.
     p->from = nodeDB->getNodeNum();
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_PLACEHOLDER;
     p->hop_limit = Default::getConfiguredOrDefaultHopLimit(config.lora.hop_limit);
     p->id = generatePacketId();
     // Just in case we process the packet locally - make sure it has a timestamp.
@@ -466,9 +489,32 @@ ErrorCode Router::send(meshtastic_MeshPacket *p)
     }
 #endif
 
-    // If we are the original transmitter, set the hop limit with which we start
-    if (isFromUs(p))
+    // check whether we have a destination configured for our "to" address
+    meshtastic_Config_DestinationsConfig_MeshDestination *dest = nullptr;
+    uint32_t our_node_num = nodeDB->getNodeNum();
+    bool conducting_leap = false;
+
+
+    // if we are the originator or we're conducting a leap, check if we have a destination to the current "to" address (which may
+    // be the next leap) and then apply any custom hop_limit
+    if (isFromUs(p) || conducting_leap) {
+        dest = findDestinationForAddress(p->to);
+        if (dest && dest->has_hop_limit && dest->hop_limit > 0) {
+            LOG_DEBUG("Overriding hop limit %u to %u", p->hop_limit, dest->hop_limit);
+            p->hop_limit = dest->hop_limit;
+        }
+
+        // Reset the hop limit with which we start
         p->hop_start = p->hop_limit;
+    }
+
+    // Update next hop if configured
+    if (dest && dest->has_next_hop && dest->next_hop != 0) {
+        LOG_DEBUG("Overriding next hop %u to %u", p->next_hop, dest->next_hop);
+        p->next_hop = dest->next_hop;
+    }
+
+
 
     // If the packet hasn't yet been encrypted, do so now (it might already be encrypted if we are just forwarding it)
 

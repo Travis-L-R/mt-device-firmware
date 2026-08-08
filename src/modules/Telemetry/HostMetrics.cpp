@@ -130,7 +130,7 @@ bool HostMetricsModule::sendMetrics()
     meshtastic_MeshPacket *p = allocDataProtobuf(telemetry);
     if (!p)
         return false;
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_PLACEHOLDER;
     p->decoded.want_response = false;
     p->priority = meshtastic_MeshPacket_Priority_BACKGROUND;
     p->channel = portduino_config.hostMetrics_channel;

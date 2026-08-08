@@ -75,6 +75,9 @@ class Router : protected concurrency::OSThread, protected PacketHistory
     /** Attempt to find a packet in the TxQueue. Returns true if the packet was found. */
     bool findInTxQueue(NodeNum from, PacketId id);
 
+    /** Attempt to find a destination for this node number, optionally selecting only for destinations with leap info (and validating against any supplied leap_mask) */
+    meshtastic_Config_DestinationsConfig_MeshDestination *findDestinationForAddress(uint32_t n, bool leap_only = false, uint32_t leap_mask = 0);
+
     /** Allocate and return a meshpacket which defaults as send to broadcast from the current node.
      * The returned packet is guaranteed to have a unique packet ID already assigned
      */

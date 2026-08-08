@@ -122,6 +122,9 @@ void NodeInfoModule::sendOurNodeInfo(NodeNum dest, bool wantReplies, uint8_t cha
         if (channel > 0) {
             LOG_DEBUG("Send ourNodeInfo to channel %d", channel);
             p->channel = channel;
+        } else if (dest == NODENUM_PLACEHOLDER && config.has_destinations && config.destinations.nodeinfo_channel != 0) {
+            LOG_DEBUG("Send ourNodeInfo to selected channel %d", config.destinations.nodeinfo_channel);
+            p->channel = config.destinations.nodeinfo_channel;
         }
 
         prevPacketId = p->id;
@@ -227,7 +230,7 @@ int32_t NodeInfoModule::runOnce()
 
     if (airTime->isTxAllowedAirUtil() && config.device.role != meshtastic_Config_DeviceConfig_Role_CLIENT_HIDDEN) {
         LOG_INFO("Send our nodeinfo to mesh (wantReplies=%d)", requestReplies);
-        sendOurNodeInfo(NODENUM_BROADCAST, requestReplies); // Send our info (don't request replies)
+        sendOurNodeInfo(NODENUM_PLACEHOLDER, requestReplies); // Send our info (don't request replies)
     }
     return Default::getConfiguredOrDefaultMs(config.device.node_info_broadcast_secs, default_node_info_broadcast_secs);
 }

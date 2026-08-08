@@ -460,7 +460,7 @@ void PositionModule::sendOurPosition()
     for (uint8_t channelNum = 0; channelNum < 8; channelNum++) {
         if (getPositionPrecisionForChannel(channelNum) != 0) {
             LOG_INFO("Send pos@%x:6 to mesh (wantReplies=%d)", localPosition.timestamp, requestReplies);
-            sendOurPosition(NODENUM_BROADCAST, requestReplies, channelNum);
+            sendOurPosition(NODENUM_PLACEHOLDER, requestReplies, channelNum);
             return;
         }
     }
@@ -701,7 +701,7 @@ void PositionModule::sendLostAndFoundText()
     meshtastic_MeshPacket *p = allocDataPacket();
     if (!p)
         return;
-    p->to = NODENUM_BROADCAST;
+    p->to = NODENUM_PLACEHOLDER;
     char message[128];
     int written = snprintf(message, sizeof(message), "🚨I'm lost! Lat / Lon: %f, %f\a", (lastGpsLatitude * 1e-7),
                            (lastGpsLongitude * 1e-7));
