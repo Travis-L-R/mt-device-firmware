@@ -169,14 +169,14 @@ class Router : protected concurrency::OSThread, protected PacketHistory
      * Called from perhapsHandleReceived() for radio ingress and from deliverLocal() for our own
      * loopback, so p may be locally generated. Does NOT free p; the caller still owns it.
      */
-    void handleReceived(meshtastic_MeshPacket *p, RxSource src = RX_SRC_RADIO);
+    void handleReceived(meshtastic_MeshPacket *p, RxSource src = RX_SRC_RADIO, bool mqttOnly = false);
 
     /**
      * The body of handleReceived(): decode, run modules, publish to MQTT. Split out so the
      * depth-guarded drain in handleReceived() can process a deferred packet without re-entering
      * the drain (and without touching handleDepth) - keeping the stack flat.
      */
-    void dispatchReceived(meshtastic_MeshPacket *p, RxSource src);
+    void dispatchReceived(meshtastic_MeshPacket *p, RxSource src, bool mqttOnly = false);
 
     /**
      * Route a packet addressed to us (or a local broadcast we loop back) into handleReceived().

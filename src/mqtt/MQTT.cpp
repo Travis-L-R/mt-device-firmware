@@ -173,7 +173,6 @@ inline void onReceiveProto(char *topic, byte *payload, size_t length)
         }
         p->channel = ch.index;
 
-#if !USERPREFS_UPLINK_ALL_PACKETS
 #if !(MESHTASTIC_EXCLUDE_PKI) && !(MESHTASTIC_EXCLUDE_XEDDSA) 
         // Already-decoded downlink skips perhapsDecode's crypto path entirely, so enforce the
         // signature policy here: verify a carried signature and apply unsigned-downgrade
@@ -198,7 +197,7 @@ inline void onReceiveProto(char *topic, byte *payload, size_t length)
             router->enqueueReceivedMessage(p.release());
     } else if (router && passesRoutingAuthGate(p.get()) == RoutingAuthVerdict::ACCEPT)
         router->enqueueReceivedMessage(p.release());
-#endif
+
 }
 
 /// Determines if the given IPAddress is a private IPv4 address, i.e. not routable on the public internet.
@@ -705,12 +704,13 @@ void MQTT::onSend(const meshtastic_MeshPacket &mp_encrypted, const meshtastic_Me
     if (mp_encrypted.via_mqtt)
         return; // Don't send messages that came from MQTT back into MQTT
 
-#if !USERPREFS_UPLINK_ALL_CHANNELS
     bool uplinkEnabled = false;
     for (int i = 0; i <= 7; i++) {
         if (channels.getByIndex(i).settings.uplink_enabled)
             uplinkEnabled = true;
     }
+    
+#if !USERPREFS_UPLINK_ALL_CHANNELS
     if (!uplinkEnabled)
         return; // no channels have an uplink enabled
 #endif

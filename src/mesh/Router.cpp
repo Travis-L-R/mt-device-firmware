@@ -1354,7 +1354,7 @@ void Router::deliverLocal(meshtastic_MeshPacket *p, RxSource src)
  * Handle any packet that is received by an interface on this node.
  * Note: some packets may merely being passed through this node and will be forwarded elsewhere.
  */
-void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
+void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src, bool mqttOnly)
 {
     {
         concurrency::LockGuard g(&deferredLock);
@@ -1365,35 +1365,39 @@ void Router::handleReceived(meshtastic_MeshPacket *p, RxSource src)
 #endif
     }
 
-    dispatchReceived(p, src);
+    dispatchReceived(p, src, mqttOnly);
 
-    // Decide "am I the last frame" and drop the depth in one critical section. Splitting them lets
-    // two frames both read the same pre-decrement value, skip the drain, and strand the ring.
-    for (;;) {
-        DeferredLocal d;
-        {
-            concurrency::LockGuard g(&deferredLock);
-            if (handleDepth > 1) {
-                // Another frame is still live and will own the drain once it is last.
-                handleDepth--;
-                return;
+    if (!mqttOnly) {
+
+        // Decide "am I the last frame" and drop the depth in one critical section. Splitting them lets
+        // two frames both read the same pre-decrement value, skip the drain, and strand the ring.
+        for (;;) {
+            DeferredLocal d;
+            {
+                concurrency::LockGuard g(&deferredLock);
+                if (handleDepth > 1) {
+                    // Another frame is still live and will own the drain once it is last.
+                    handleDepth--;
+                    return;
+                }
+                if (!dequeueDeferredLocal(d)) {
+                    // Last frame and nothing queued, so zero is reached only with the ring empty.
+                    handleDepth--;
+                    return;
+                }
             }
-            if (!dequeueDeferredLocal(d)) {
-                // Last frame and nothing queued, so zero is reached only with the ring empty.
-                handleDepth--;
-                return;
-            }
+            // Depth stays at 1 across the drain, so a loopback from these modules defers instead of
+            // recursing, and dispatch runs outside the lock.
+            dispatchReceived(d.p, d.src);
+            packetPool.release(d.p);
         }
-        // Depth stays at 1 across the drain, so a loopback from these modules defers instead of
-        // recursing, and dispatch runs outside the lock.
-        dispatchReceived(d.p, d.src);
-        packetPool.release(d.p);
+
     }
 }
 
-void Router::dispatchReceived(meshtastic_MeshPacket *p, RxSource src)
+void Router::dispatchReceived(meshtastic_MeshPacket *p, RxSource src, bool mqttOnly)
 {
-    bool skipHandle = false;
+    bool skipHandle = mqttOnly;
 
     // Store a copy of the encrypted packet for MQTT.
     // Kept as a local (not a class member) so each dispatch owns its own copy. A shared member was
@@ -1422,79 +1426,83 @@ void Router::dispatchReceived(meshtastic_MeshPacket *p, RxSource src)
 
     // Take those raw bytes and convert them back into a well structured protobuf we can understand
     auto decodedState = perhapsDecode(p);
-    if (decodedState == DecodeState::DECODE_FATAL || decodedState == DecodeState::DECODE_POLICY_REJECT ||
-        decodedState == DecodeState::DECODE_FAILURE) {
-        // Fatal decoding error, we can't do anything with this packet
-        LOG_WARN(decodedState == DecodeState::DECODE_POLICY_REJECT
-                     ? "Packet rejected by signature policy"
-                     : (decodedState == DecodeState::DECODE_FATAL ? "Fatal decode error, dropping packet"
-                                                                  : "Decryptable packet failed decoding, dropping packet"));
-        // A policy rejection is attacker-controlled input and must not cancel a valid pending
-        // transmission with the same (from, id). Preserve the pre-existing fatal-decode behavior.
-        if (decodedState == DecodeState::DECODE_FATAL)
-            cancelSending(p->from, p->id);
-        skipHandle = true;
-    } else if (decodedState == DecodeState::DECODE_SUCCESS) {
-        // parsing was successful, queue for our recipient
-        if (src == RX_SRC_LOCAL)
-            printPacket("handleReceived(LOCAL)", p);
-        else if (src == RX_SRC_USER)
-            printPacket("handleReceived(USER)", p);
-        else
-            printPacket("handleReceived(REMOTE)", p);
+    if (!mqttOnly) {
 
-#if MESHTASTIC_PREHOP_DROP
-        // Pre-hop firmware drop, post-decode half: the bitfield that proves the origin populated hop_start is
-        // encrypted under the channel key, so it can only be evaluated now that the packet is decoded. A packet
-        // whose hop_start is still missing/unknown comes from pre-hop firmware - keep it out of module
-        // processing, admin handling, phone delivery, MQTT and rebroadcast. Local-origin packets are exempt.
-        if (!isFromUs(p) && classifyHopStart(*p) != HopStartStatus::VALID) {
-            logHopStartDrop(*p, "post-decode pre-hop drop");
-            cancelSending(p->from, p->id);
+        if (decodedState == DecodeState::DECODE_FATAL || decodedState == DecodeState::DECODE_POLICY_REJECT ||
+            decodedState == DecodeState::DECODE_FAILURE) {
+            // Fatal decoding error, we can't do anything with this packet
+            LOG_WARN(decodedState == DecodeState::DECODE_POLICY_REJECT
+                        ? "Packet rejected by signature policy"
+                        : (decodedState == DecodeState::DECODE_FATAL ? "Fatal decode error, dropping packet"
+                                                                    : "Decryptable packet failed decoding, dropping packet"));
+            // A policy rejection is attacker-controlled input and must not cancel a valid pending
+            // transmission with the same (from, id). Preserve the pre-existing fatal-decode behavior.
+            if (decodedState == DecodeState::DECODE_FATAL)
+                cancelSending(p->from, p->id);
             skipHandle = true;
-        }
-#endif
+        } else if (decodedState == DecodeState::DECODE_SUCCESS) {
+            // parsing was successful, queue for our recipient
+            if (src == RX_SRC_LOCAL)
+                printPacket("handleReceived(LOCAL)", p);
+            else if (src == RX_SRC_USER)
+                printPacket("handleReceived(USER)", p);
+            else
+                printPacket("handleReceived(REMOTE)", p);
 
-        // Neighbor info module is disabled, ignore expensive neighbor info packets
-        if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
-            p->decoded.portnum == meshtastic_PortNum_NEIGHBORINFO_APP &&
-            (!moduleConfig.has_neighbor_info || !moduleConfig.neighbor_info.enabled)) {
-            LOG_DEBUG("Neighbor info module is disabled, ignore neighbor packet");
-            cancelSending(p->from, p->id);
-            skipHandle = true;
+    #if MESHTASTIC_PREHOP_DROP
+            // Pre-hop firmware drop, post-decode half: the bitfield that proves the origin populated hop_start is
+            // encrypted under the channel key, so it can only be evaluated now that the packet is decoded. A packet
+            // whose hop_start is still missing/unknown comes from pre-hop firmware - keep it out of module
+            // processing, admin handling, phone delivery, MQTT and rebroadcast. Local-origin packets are exempt.
+            if (!isFromUs(p) && classifyHopStart(*p) != HopStartStatus::VALID) {
+                logHopStartDrop(*p, "post-decode pre-hop drop");
+                cancelSending(p->from, p->id);
+                skipHandle = true;
+            }
+    #endif
+
+            // Neighbor info module is disabled, ignore expensive neighbor info packets
+            if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
+                p->decoded.portnum == meshtastic_PortNum_NEIGHBORINFO_APP &&
+                (!moduleConfig.has_neighbor_info || !moduleConfig.neighbor_info.enabled)) {
+                LOG_DEBUG("Neighbor info module is disabled, ignore neighbor packet");
+                cancelSending(p->from, p->id);
+                skipHandle = true;
+            }
+
+    #if !MESHTASTIC_EXCLUDE_BEACON
+            // Beacon listening is disabled: drop beacon packets so they are neither surfaced to the
+            // phone nor handled on-device (same pattern as the disabled neighbor-info case above).
+            if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
+                p->decoded.portnum == meshtastic_PortNum_MESH_BEACON_APP &&
+                (!moduleConfig.has_mesh_beacon ||
+                !(moduleConfig.mesh_beacon.flags & meshtastic_ModuleConfig_MeshBeaconConfig_Flags_FLAG_LISTEN_ENABLED))) {
+                LOG_DEBUG("Beacon listening is disabled, ignore beacon packet");
+                cancelSending(p->from, p->id);
+                skipHandle = true;
+            }
+    #endif
+
+            bool shouldIgnoreNonstandardPorts =
+                config.device.rebroadcast_mode == meshtastic_Config_DeviceConfig_RebroadcastMode_CORE_PORTNUMS_ONLY;
+    #if USERPREFS_EVENT_MODE
+            shouldIgnoreNonstandardPorts = true;
+    #endif
+            if (shouldIgnoreNonstandardPorts && p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
+                !IS_ONE_OF(p->decoded.portnum, meshtastic_PortNum_TEXT_MESSAGE_APP, meshtastic_PortNum_TEXT_MESSAGE_COMPRESSED_APP,
+                        meshtastic_PortNum_POSITION_APP, meshtastic_PortNum_NODEINFO_APP, meshtastic_PortNum_ROUTING_APP,
+                        meshtastic_PortNum_TELEMETRY_APP, meshtastic_PortNum_ADMIN_APP, meshtastic_PortNum_ALERT_APP,
+                        meshtastic_PortNum_KEY_VERIFICATION_APP, meshtastic_PortNum_WAYPOINT_APP,
+                        meshtastic_PortNum_STORE_FORWARD_APP, meshtastic_PortNum_TRACEROUTE_APP,
+                        meshtastic_PortNum_STORE_FORWARD_PLUSPLUS_APP)) {
+                LOG_DEBUG("Ignore packet on non-standard portnum for CORE_PORTNUMS_ONLY");
+                cancelSending(p->from, p->id);
+                skipHandle = true;
+            }
+        } else {
+            printPacket("packet decoding failed or skipped (no PSK?)", p);
         }
 
-#if !MESHTASTIC_EXCLUDE_BEACON
-        // Beacon listening is disabled: drop beacon packets so they are neither surfaced to the
-        // phone nor handled on-device (same pattern as the disabled neighbor-info case above).
-        if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
-            p->decoded.portnum == meshtastic_PortNum_MESH_BEACON_APP &&
-            (!moduleConfig.has_mesh_beacon ||
-             !(moduleConfig.mesh_beacon.flags & meshtastic_ModuleConfig_MeshBeaconConfig_Flags_FLAG_LISTEN_ENABLED))) {
-            LOG_DEBUG("Beacon listening is disabled, ignore beacon packet");
-            cancelSending(p->from, p->id);
-            skipHandle = true;
-        }
-#endif
-
-        bool shouldIgnoreNonstandardPorts =
-            config.device.rebroadcast_mode == meshtastic_Config_DeviceConfig_RebroadcastMode_CORE_PORTNUMS_ONLY;
-#if USERPREFS_EVENT_MODE
-        shouldIgnoreNonstandardPorts = true;
-#endif
-        if (shouldIgnoreNonstandardPorts && p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
-            !IS_ONE_OF(p->decoded.portnum, meshtastic_PortNum_TEXT_MESSAGE_APP, meshtastic_PortNum_TEXT_MESSAGE_COMPRESSED_APP,
-                       meshtastic_PortNum_POSITION_APP, meshtastic_PortNum_NODEINFO_APP, meshtastic_PortNum_ROUTING_APP,
-                       meshtastic_PortNum_TELEMETRY_APP, meshtastic_PortNum_ADMIN_APP, meshtastic_PortNum_ALERT_APP,
-                       meshtastic_PortNum_KEY_VERIFICATION_APP, meshtastic_PortNum_WAYPOINT_APP,
-                       meshtastic_PortNum_STORE_FORWARD_APP, meshtastic_PortNum_TRACEROUTE_APP,
-                       meshtastic_PortNum_STORE_FORWARD_PLUSPLUS_APP)) {
-            LOG_DEBUG("Ignore packet on non-standard portnum for CORE_PORTNUMS_ONLY");
-            cancelSending(p->from, p->id);
-            skipHandle = true;
-        }
-    } else {
-        printPacket("packet decoding failed or skipped (no PSK?)", p);
     }
 
     // call modules here
@@ -1512,8 +1520,13 @@ void Router::dispatchReceived(meshtastic_MeshPacket *p, RxSource src)
                 !isBroadcast(p->to) && !isToUs(p))
                 p_encrypted->pki_encrypted = true;
             // After potentially altering it, publish received message to MQTT if we're not the original transmitter of the packet
+#if !USERPREFS_UPLINK_ALL_PACKETS
             if ((decodedState == DecodeState::DECODE_SUCCESS || p_encrypted->pki_encrypted) && moduleConfig.mqtt.enabled &&
                 !isFromUs(p) && mqtt) {
+#else
+            if ((decodedState == DecodeState::DECODE_SUCCESS || moduleConfig.mqtt.encryption_enabled) && moduleConfig.mqtt.enabled &&
+               !isFromUs(p) && mqtt) {
+#endif
                 if (decodedState == DecodeState::DECODE_SUCCESS && p->decoded.portnum == meshtastic_PortNum_TRACEROUTE_APP &&
                     moduleConfig.mqtt.encryption_enabled) {
                     // For TRACEROUTE_APP packets release the original encrypted packet and encrypt a new from the changed packet
@@ -1558,6 +1571,9 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
 #endif
     // assert(radioConfig.has_preferences);
     if (is_in_repeated(config.lora.ignore_incoming, p->from)) {
+#if !USERPREFS_UPLINK_REPEAT_PACKETS
+        handleReceived(p, RX_SRC_RADIO, true);
+#endif
         clearRoutingAuthCache();
         LOG_DEBUG("Ignore msg, 0x%08x is in our ignore list", p->from);
         packetPool.release(p);
@@ -1566,6 +1582,9 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
 
     meshtastic_NodeInfoLite const *node = nodeDB->getMeshNode(p->from);
     if (nodeInfoLiteIsIgnored(node)) {
+#if !USERPREFS_UPLINK_REPEAT_PACKETS
+        handleReceived(p, RX_SRC_RADIO, true);
+#endif
         clearRoutingAuthCache();
         LOG_DEBUG("Ignore msg, 0x%08x is ignored", p->from);
         packetPool.release(p);
@@ -1573,6 +1592,9 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
     }
 
     if (p->from == NODENUM_BROADCAST) {
+#if !USERPREFS_UPLINK_REPEAT_PACKETS
+        handleReceived(p, RX_SRC_RADIO, true);
+#endif
         clearRoutingAuthCache();
         LOG_DEBUG("Ignore msg from broadcast address");
         packetPool.release(p);
@@ -1586,30 +1608,12 @@ void Router::perhapsHandleReceived(meshtastic_MeshPacket *p)
         return;
     }
 
-    if (shouldDropPacketForPreHop(*p)) {
-        clearRoutingAuthCache();
-        logHopStartDrop(*p, "pre-hop drop");
-        packetPool.release(p);
-        return;
-    }
-
-    // Decrypt and authenticate before Reliable/Flooding/NextHop filters can update retry
-    // timers, packet history, implicit ACK state, cancellation, or relay queues. A packet for
-    // an unknown channel passes as opaque traffic and retains the existing relay behavior.
-    const auto authVerdict = passesRoutingAuthGate(p);
-    if (authVerdict == RoutingAuthVerdict::REJECT) {
-        packetPool.release(p);
-        return;
-    }
-    if (authVerdict == RoutingAuthVerdict::OPAQUE_RELAY_ONLY) {
-        relayOpaquePacket(p);
-        packetPool.release(p);
-        return;
-    }
 
     if (shouldFilterReceived(p)) {
-        clearRoutingAuthCache();
-        LOG_DEBUG("Incoming msg was filtered from 0x%08x", p->from);
+#if !USERPREFS_UPLINK_REPEAT_PACKETS
+        handleReceived(p, RX_SRC_RADIO, true);
+#endif
+        LOG_DEBUG("Incoming msg was filtered from 0x%x", p->from);
         packetPool.release(p);
         return;
     }
