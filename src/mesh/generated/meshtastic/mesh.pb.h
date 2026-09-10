@@ -1009,117 +1009,6 @@ typedef struct _meshtastic_MqttClientProxyMessage {
     bool retained;
 } meshtastic_MqttClientProxyMessage;
 
-typedef PB_BYTES_ARRAY_T(256) meshtastic_MeshPacket_encrypted_t;
-typedef PB_BYTES_ARRAY_T(32) meshtastic_MeshPacket_public_key_t;
-/* A packet envelope sent/received over the mesh
- only payload_variant is sent in the payload portion of the LORA packet.
- The other fields are either not sent at all, or sent in the special 16 byte LORA header. */
-typedef struct _meshtastic_MeshPacket {
-    /* The sending node number.
- Note: Our crypto implementation uses this field as well.
- See [crypto](/docs/overview/encryption) for details. */
-    uint32_t from;
-    /* The (immediate) destination for this packet
- If the value is 4,294,967,295 (maximum value of an unsigned 32bit integer), this indicates that the packet was
- not destined for a specific node, but for a channel as indicated by the value of `channel` below.
- If the value is another, this indicates that the packet was destined for a specific
- node (i.e. a kind of "Direct Message" to this node) and not broadcast on a channel. */
-    uint32_t to;
-    /* (Usually) If set, this indicates the index in the secondary_channels table that this packet was sent/received on.
- If unset, packet was on the primary channel.
- A particular node might know only a subset of channels in use on the mesh.
- Therefore channel_index is inherently a local concept and meaningless to send between nodes.
- Very briefly, while sending and receiving deep inside the device Router code, this field instead
- contains the 'channel hash' instead of the index.
- This 'trick' is only used while the payload_variant is an 'encrypted'. */
-    uint8_t channel;
-    pb_size_t which_payload_variant;
-    union {
-        /* TODO: REPLACE */
-        meshtastic_Data decoded;
-        /* TODO: REPLACE */
-        meshtastic_MeshPacket_encrypted_t encrypted;
-    };
-    /* A unique ID for this packet.
- Always 0 for no-ack packets or non broadcast packets (and therefore take zero bytes of space).
- Otherwise a unique ID for this packet, useful for flooding algorithms.
- ID only needs to be unique on a _per sender_ basis, and it only
- needs to be unique for a few minutes (long enough to last for the length of
- any ACK or the completion of a mesh broadcast flood).
- Note: Our crypto implementation uses this id as well.
- See [crypto](/docs/overview/encryption) for details. */
-    uint32_t id;
-    /* The time this message was received by the esp32 (secs since 1970).
- Note: this field is _never_ sent on the radio link itself (to save space) Times
- are typically not sent over the mesh, but they will be added to any Packet
- (chain of SubPacket) sent to the phone (so the phone can know exact time of reception)
- Explicit presence: firmware cannot always attach a trustworthy wall-clock timestamp at the
- moment of reception - a node with no GPS and no phone connected yet has no time source at
- all. has_rx_time disambiguates that state from a genuine (if coincidental) 1970-01-01
- reading. A packet delivered with this field absent may still be re-timestamped once a valid
- clock becomes available, before the phone ever sees it - "absent" is not guaranteed
- permanent, only "not yet known at last observation". */
-    bool has_rx_time;
-    uint32_t rx_time;
-    /* *Never* sent over the radio links.
- Set during reception to indicate the SNR of this packet.
- Used to collect statistics on current link quality. */
-    float rx_snr;
-    /* If unset treated as zero (no forwarding, send to direct neighbor nodes only)
- if 1, allow hopping through one node, etc...
- For our usecase real world topologies probably have a max of about 3.
- This field is normally placed into a few of bits in the header. */
-    uint8_t hop_limit;
-    /* This packet is being sent as a reliable message, we would prefer it to arrive at the destination.
- We would like to receive a ack packet in response.
- Broadcasts messages treat this flag specially: Since acks for broadcasts would
- rapidly flood the channel, the normal ack behavior is suppressed.
- Instead, the original sender listens to see if at least one node is rebroadcasting this packet (because naive flooding algorithm).
- If it hears that the odds (given typical LoRa topologies) the odds are very high that every node should eventually receive the message.
- So FloodingRouter.cpp generates an implicit ack which is delivered to the original sender.
- If after some time we don't hear anyone rebroadcast our packet, we will timeout and retransmit, using the regular resend logic.
- Note: This flag is normally sent in a flag bit in the header when sent over the wire */
-    bool want_ack;
-    /* The priority of this message for sending.
- See MeshPacket.Priority description for more details. */
-    meshtastic_MeshPacket_Priority priority;
-    /* rssi of received packet. Only sent to phone for dispay purposes.
- Explicit presence: rssi 0 is a legitimate reading on some radios (SX126x can report exactly
- 0 dBm; SX127x's formula can even go positive). has_rx_rssi disambiguates; a replayed packet
- built from history should leave this field absent rather than emitting 0. */
-    bool has_rx_rssi;
-    int32_t rx_rssi;
-    /* Describe if this message is delayed */
-    meshtastic_MeshPacket_Delayed delayed;
-    /* Describes whether this packet passed via MQTT somewhere along the path it currently took. */
-    bool via_mqtt;
-    /* Hop limit with which the original packet started. Sent via LoRa using three bits in the unencrypted header.
- When receiving a packet, the difference between hop_start and hop_limit gives how many hops it traveled.
- hop_start == 0 does not necessarily mean a direct (0-hop) neighbor: firmware prior to 2.3.0
- never populated this field, so a receiver can only trust hop_start == 0 as genuine once it has
- decoded the packet and confirmed the sender's bitfield is present (added in 2.5.0). Until then,
- or for a sender that never sets that bitfield, treat hop_start == 0 as unknown, not direct. */
-    uint8_t hop_start;
-    /* Records the public key the packet was encrypted with, if applicable. */
-    meshtastic_MeshPacket_public_key_t public_key;
-    /* Indicates whether the packet was en/decrypted using PKI */
-    bool pki_encrypted;
-    /* Last byte of the node number of the node that should be used as the next hop in routing.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint8_t next_hop;
-    /* Last byte of the node number of the node that will relay/relayed this packet.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint8_t relay_node;
-    /* *Never* sent over the radio links.
- Timestamp after which this packet may be sent.
- Set by the firmware internally, clients are not supposed to set this. */
-    uint32_t tx_after;
-    /* Indicates which transport mechanism this packet arrived over */
-    meshtastic_MeshPacket_TransportMechanism transport_mechanism;
-    /* Indicates whether the packet has a valid signature */
-    bool xeddsa_signed;
-} meshtastic_MeshPacket;
-
 /* The bluetooth to device link:
  Old BTLE protocol docs from TODO, merge in above and make real docs...
  use protocol buffers, and NanoPB
@@ -1249,15 +1138,15 @@ typedef struct _meshtastic_LockdownStatus {
     /* Current lockdown state being reported. */
     meshtastic_LockdownStatus_State state;
     /* For LOCKED: machine-readable reason. Known values:
-   "needs_auth"        — storage already unlocked, client must auth
-   "token_missing"     — no boot token on flash
-   "token_expired"     — boot token wall-clock TTL elapsed
-   "token_boots_zero"  — boot token boot-count TTL exhausted
-   "token_hmac_fail"   — token tampered or wrong device
-   "token_dek_fail"    — token DEK decrypt failed
-   "token_wrong_size"  — token file corrupted
-   "token_bad_magic"   — token file corrupted
-   "not_provisioned"   — should generally use NEEDS_PROVISION state instead
+   "needs_auth"        - storage already unlocked, client must auth
+   "token_missing"     - no boot token on flash
+   "token_expired"     - boot token wall-clock TTL elapsed
+   "token_boots_zero"  - boot token boot-count TTL exhausted
+   "token_hmac_fail"   - token tampered or wrong device
+   "token_dek_fail"    - token DEK decrypt failed
+   "token_wrong_size"  - token file corrupted
+   "token_bad_magic"   - token file corrupted
+   "not_provisioned"   - should generally use NEEDS_PROVISION state instead
  Other values may be added; clients should treat unknown values as
  "locked, ask for passphrase". */
     char lock_reason[32];
