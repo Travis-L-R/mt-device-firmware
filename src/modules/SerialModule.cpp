@@ -49,6 +49,30 @@
 #include "meshSolarApp.h"
 #endif
 
+// Outside the architecture guard on purpose: config validation, not serial I/O. See SerialModule.h.
+bool serialConfigIsValid(const meshtastic_ModuleConfig_SerialConfig &config)
+{
+    if (config.override_console_serial_port && !IS_ONE_OF(config.mode, meshtastic_ModuleConfig_SerialConfig_Serial_Mode_NMEA,
+                                                          meshtastic_ModuleConfig_SerialConfig_Serial_Mode_CALTOPO,
+                                                          meshtastic_ModuleConfig_SerialConfig_Serial_Mode_MS_CONFIG)) {
+        const char *warning = "Invalid Serial config: override console serial port is only supported in NMEA, CalTopo, or MS "
+                              "Config output-only modes.";
+        LOG_ERROR(warning);
+#ifndef PIO_UNIT_TESTING
+        meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
+        if (cn) {
+            cn->level = meshtastic_LogRecord_Level_ERROR;
+            cn->time = getValidTime(RTCQualityFromNet);
+            snprintf(cn->message, sizeof(cn->message), "%s", warning);
+            service->sendClientNotification(cn);
+        }
+#endif
+        return false;
+    }
+
+    return true;
+}
+
 #if (defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040) || defined(ARCH_STM32WL)) &&                             \
     !defined(CONFIG_IDF_TARGET_ESP32S2) && !defined(CONFIG_IDF_TARGET_ESP32C3)
 
@@ -85,29 +109,6 @@ static Print *serialPrint = &SERIAL_PRINT_OBJECT;
 
 char serialBytes[512];
 size_t serialPayloadSize;
-
-bool SerialModule::isValidConfig(const meshtastic_ModuleConfig_SerialConfig &config)
-{
-    if (config.override_console_serial_port && !IS_ONE_OF(config.mode, meshtastic_ModuleConfig_SerialConfig_Serial_Mode_NMEA,
-                                                          meshtastic_ModuleConfig_SerialConfig_Serial_Mode_CALTOPO,
-                                                          meshtastic_ModuleConfig_SerialConfig_Serial_Mode_MS_CONFIG)) {
-        const char *warning =
-            "Invalid Serial config: override console serial port is only supported in NMEA and CalTopo output-only modes.";
-        LOG_ERROR(warning);
-#ifndef PIO_UNIT_TESTING
-        meshtastic_ClientNotification *cn = clientNotificationPool.allocZeroed();
-        if (cn) {
-            cn->level = meshtastic_LogRecord_Level_ERROR;
-            cn->time = getValidTime(RTCQualityFromNet);
-            snprintf(cn->message, sizeof(cn->message), "%s", warning);
-            service->sendClientNotification(cn);
-        }
-#endif
-        return false;
-    }
-
-    return true;
-}
 
 SerialModuleRadio::SerialModuleRadio() : SinglePortModule("SerialModuleRadio", meshtastic_PortNum_SERIAL_APP)
 {
@@ -407,17 +408,14 @@ ProcessMessage SerialModuleRadio::handleReceived(const meshtastic_MeshPacket &mp
                        HAS_GPS) {
                 // Decode the Payload some more
                 meshtastic_Position scratch;
-                meshtastic_Position *decoded = NULL;
                 if (mp.which_payload_variant == meshtastic_MeshPacket_decoded_tag && mp.decoded.portnum == ourPortNum) {
                     memset(&scratch, 0, sizeof(scratch));
+                    // A payload that fails to decode leaves nothing to report, so say nothing.
                     if (pb_decode_from_bytes(p.payload.bytes, p.payload.size, &meshtastic_Position_msg, &scratch)) {
-                        decoded = &scratch;
-                    }
-                    // send position packet as WPL to the serial port
-                    {
-                        meshtastic_NodeInfoLite *senderNode = nodeDB->getMeshNode(getFrom(&mp));
+                        // send position packet as WPL to the serial port
+                        const meshtastic_NodeInfoLite *senderNode = nodeDB->getMeshNode(getFrom(&mp));
                         const char *senderName = senderNode ? senderNode->long_name : "";
-                        printWPL(outbuf, sizeof(outbuf), *decoded, senderName,
+                        printWPL(outbuf, sizeof(outbuf), scratch, senderName,
                                  moduleConfig.serial.mode == meshtastic_ModuleConfig_SerialConfig_Serial_Mode_CALTOPO);
                         serialPrint->printf("%s", outbuf);
                     }

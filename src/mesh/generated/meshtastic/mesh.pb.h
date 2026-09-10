@@ -339,6 +339,14 @@ typedef enum _meshtastic_HardwareModel {
     meshtastic_HardwareModel_HELTEC_RC52 = 142,
     /* Heltec ESP32C6 + SX1262 */
     meshtastic_HardwareModel_HELTEC_RCC6 = 143,
+    /* Seeed Wio Tracker L1 Pro 1W, nRF52840 + SX1262 with 1 W external PA */
+    meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1_PRO_1W = 144,
+    /* Meshnology W12 */
+    meshtastic_HardwareModel_MESHNOLOGY_W12 = 145,
+    /* Seeed Studio MeshPager X2 */
+    meshtastic_HardwareModel_MESHPAGER_X2 = 146,
+    /* Lilygo T-CONNECT PRO */
+    meshtastic_HardwareModel_T_CONNECT_PRO = 147,
     /* ------------------------------------------------------------------------------------------------------------------------------------------
  Reserved ID For developing private Ports. These will show up in live traffic sparsely, so we can use a high number. Keep it within 8 bits.
  ------------------------------------------------------------------------------------------------------------------------------------------ */
@@ -414,6 +422,10 @@ typedef enum _meshtastic_FirmwareEdition {
     meshtastic_FirmwareEdition_HAMVENTION = 19,
     /* FAB, the international Fab Lab digital fabrication conference */
     meshtastic_FirmwareEdition_FAB = 20,
+    /* Dragon Con, the yearly pop culture convention in Atlanta, GA */
+    meshtastic_FirmwareEdition_DRAGON_CON = 21,
+    /* Chaos Communication Congress, the hacker conference held yearly in Germany */
+    meshtastic_FirmwareEdition_CCC = 22,
     /* Placeholder for DIY and unofficial events */
     meshtastic_FirmwareEdition_DIY_EDITION = 127
 } meshtastic_FirmwareEdition;
@@ -732,7 +744,7 @@ typedef struct _meshtastic_Position {
    multiplied with DOP to calculate positional accuracy
  Default: "'bout three meters-ish" :) */
     uint32_t gps_accuracy;
-    /* Ground speed in m/s and True North TRACK in 1/100 degrees
+    /* Ground speed in km/h and True North TRACK in 1/100 degrees
  Clarification of terms:
  - "track" is the direction of motion (measured in horizontal plane)
  - "heading" is where the fuselage points (measured in horizontal plane)
@@ -997,6 +1009,117 @@ typedef struct _meshtastic_MqttClientProxyMessage {
     bool retained;
 } meshtastic_MqttClientProxyMessage;
 
+typedef PB_BYTES_ARRAY_T(256) meshtastic_MeshPacket_encrypted_t;
+typedef PB_BYTES_ARRAY_T(32) meshtastic_MeshPacket_public_key_t;
+/* A packet envelope sent/received over the mesh
+ only payload_variant is sent in the payload portion of the LORA packet.
+ The other fields are either not sent at all, or sent in the special 16 byte LORA header. */
+typedef struct _meshtastic_MeshPacket {
+    /* The sending node number.
+ Note: Our crypto implementation uses this field as well.
+ See [crypto](/docs/overview/encryption) for details. */
+    uint32_t from;
+    /* The (immediate) destination for this packet
+ If the value is 4,294,967,295 (maximum value of an unsigned 32bit integer), this indicates that the packet was
+ not destined for a specific node, but for a channel as indicated by the value of `channel` below.
+ If the value is another, this indicates that the packet was destined for a specific
+ node (i.e. a kind of "Direct Message" to this node) and not broadcast on a channel. */
+    uint32_t to;
+    /* (Usually) If set, this indicates the index in the secondary_channels table that this packet was sent/received on.
+ If unset, packet was on the primary channel.
+ A particular node might know only a subset of channels in use on the mesh.
+ Therefore channel_index is inherently a local concept and meaningless to send between nodes.
+ Very briefly, while sending and receiving deep inside the device Router code, this field instead
+ contains the 'channel hash' instead of the index.
+ This 'trick' is only used while the payload_variant is an 'encrypted'. */
+    uint8_t channel;
+    pb_size_t which_payload_variant;
+    union {
+        /* TODO: REPLACE */
+        meshtastic_Data decoded;
+        /* TODO: REPLACE */
+        meshtastic_MeshPacket_encrypted_t encrypted;
+    };
+    /* A unique ID for this packet.
+ Always 0 for no-ack packets or non broadcast packets (and therefore take zero bytes of space).
+ Otherwise a unique ID for this packet, useful for flooding algorithms.
+ ID only needs to be unique on a _per sender_ basis, and it only
+ needs to be unique for a few minutes (long enough to last for the length of
+ any ACK or the completion of a mesh broadcast flood).
+ Note: Our crypto implementation uses this id as well.
+ See [crypto](/docs/overview/encryption) for details. */
+    uint32_t id;
+    /* The time this message was received by the esp32 (secs since 1970).
+ Note: this field is _never_ sent on the radio link itself (to save space) Times
+ are typically not sent over the mesh, but they will be added to any Packet
+ (chain of SubPacket) sent to the phone (so the phone can know exact time of reception)
+ Explicit presence: firmware cannot always attach a trustworthy wall-clock timestamp at the
+ moment of reception - a node with no GPS and no phone connected yet has no time source at
+ all. has_rx_time disambiguates that state from a genuine (if coincidental) 1970-01-01
+ reading. A packet delivered with this field absent may still be re-timestamped once a valid
+ clock becomes available, before the phone ever sees it - "absent" is not guaranteed
+ permanent, only "not yet known at last observation". */
+    bool has_rx_time;
+    uint32_t rx_time;
+    /* *Never* sent over the radio links.
+ Set during reception to indicate the SNR of this packet.
+ Used to collect statistics on current link quality. */
+    float rx_snr;
+    /* If unset treated as zero (no forwarding, send to direct neighbor nodes only)
+ if 1, allow hopping through one node, etc...
+ For our usecase real world topologies probably have a max of about 3.
+ This field is normally placed into a few of bits in the header. */
+    uint8_t hop_limit;
+    /* This packet is being sent as a reliable message, we would prefer it to arrive at the destination.
+ We would like to receive a ack packet in response.
+ Broadcasts messages treat this flag specially: Since acks for broadcasts would
+ rapidly flood the channel, the normal ack behavior is suppressed.
+ Instead, the original sender listens to see if at least one node is rebroadcasting this packet (because naive flooding algorithm).
+ If it hears that the odds (given typical LoRa topologies) the odds are very high that every node should eventually receive the message.
+ So FloodingRouter.cpp generates an implicit ack which is delivered to the original sender.
+ If after some time we don't hear anyone rebroadcast our packet, we will timeout and retransmit, using the regular resend logic.
+ Note: This flag is normally sent in a flag bit in the header when sent over the wire */
+    bool want_ack;
+    /* The priority of this message for sending.
+ See MeshPacket.Priority description for more details. */
+    meshtastic_MeshPacket_Priority priority;
+    /* rssi of received packet. Only sent to phone for dispay purposes.
+ Explicit presence: rssi 0 is a legitimate reading on some radios (SX126x can report exactly
+ 0 dBm; SX127x's formula can even go positive). has_rx_rssi disambiguates; a replayed packet
+ built from history should leave this field absent rather than emitting 0. */
+    bool has_rx_rssi;
+    int32_t rx_rssi;
+    /* Describe if this message is delayed */
+    meshtastic_MeshPacket_Delayed delayed;
+    /* Describes whether this packet passed via MQTT somewhere along the path it currently took. */
+    bool via_mqtt;
+    /* Hop limit with which the original packet started. Sent via LoRa using three bits in the unencrypted header.
+ When receiving a packet, the difference between hop_start and hop_limit gives how many hops it traveled.
+ hop_start == 0 does not necessarily mean a direct (0-hop) neighbor: firmware prior to 2.3.0
+ never populated this field, so a receiver can only trust hop_start == 0 as genuine once it has
+ decoded the packet and confirmed the sender's bitfield is present (added in 2.5.0). Until then,
+ or for a sender that never sets that bitfield, treat hop_start == 0 as unknown, not direct. */
+    uint8_t hop_start;
+    /* Records the public key the packet was encrypted with, if applicable. */
+    meshtastic_MeshPacket_public_key_t public_key;
+    /* Indicates whether the packet was en/decrypted using PKI */
+    bool pki_encrypted;
+    /* Last byte of the node number of the node that should be used as the next hop in routing.
+ Set by the firmware internally, clients are not supposed to set this. */
+    uint8_t next_hop;
+    /* Last byte of the node number of the node that will relay/relayed this packet.
+ Set by the firmware internally, clients are not supposed to set this. */
+    uint8_t relay_node;
+    /* *Never* sent over the radio links.
+ Timestamp after which this packet may be sent.
+ Set by the firmware internally, clients are not supposed to set this. */
+    uint32_t tx_after;
+    /* Indicates which transport mechanism this packet arrived over */
+    meshtastic_MeshPacket_TransportMechanism transport_mechanism;
+    /* Indicates whether the packet has a valid signature */
+    bool xeddsa_signed;
+} meshtastic_MeshPacket;
+
 /* The bluetooth to device link:
  Old BTLE protocol docs from TODO, merge in above and make real docs...
  use protocol buffers, and NanoPB
@@ -1055,6 +1178,15 @@ typedef struct _meshtastic_NodeInfo {
  Persists between NodeDB internal clean ups
  LSB 1 of the bitfield */
     bool has_xeddsa_signed;
+    /* True if we have heard this node over RF since our current LoRa
+ configuration took effect. Cleared for every node whenever the region,
+ modem preset (or the custom bandwidth/spread factor/coding rate when
+ use_preset is false), override_frequency, channel_num or the primary
+ channel name changes - the frequency slot is derived from that name.
+ Not set for nodes heard over MQTT, which reach us over the internet
+ rather than over our own radio - see via_mqtt.
+ LSB 11 of the bitfield */
+    bool heard_on_current_lora;
 } meshtastic_NodeInfo;
 
 typedef PB_BYTES_ARRAY_T(16) meshtastic_MyNodeInfo_device_id_t;
@@ -1768,7 +1900,7 @@ extern "C" {
 #define meshtastic_StatusMessage_init_default    {""}
 #define meshtastic_MqttClientProxyMessage_init_default {"", 0, {{0, {0}}}, 0}
 #define meshtastic_MeshPacket_init_default       {0, 0, 0, 0, {meshtastic_Data_init_default}, 0, false, 0, 0, 0, 0, _meshtastic_MeshPacket_Priority_MIN, false, 0, _meshtastic_MeshPacket_Delayed_MIN, 0, 0, {0, {0}}, 0, 0, 0, 0, _meshtastic_MeshPacket_TransportMechanism_MIN, 0}
-#define meshtastic_NodeInfo_init_default         {0, false, meshtastic_User_init_default, false, meshtastic_Position_init_default, 0, 0, false, meshtastic_DeviceMetrics_init_default, 0, 0, false, 0, 0, 0, 0, 0, 0}
+#define meshtastic_NodeInfo_init_default         {0, false, meshtastic_User_init_default, false, meshtastic_Position_init_default, 0, 0, false, meshtastic_DeviceMetrics_init_default, 0, 0, false, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_MyNodeInfo_init_default       {0, 0, 0, {0, {0}}, "", _meshtastic_FirmwareEdition_MIN, 0}
 #define meshtastic_LogRecord_init_default        {"", 0, "", _meshtastic_LogRecord_Level_MIN}
 #define meshtastic_QueueStatus_init_default      {0, 0, 0, 0}
@@ -1808,7 +1940,7 @@ extern "C" {
 #define meshtastic_StatusMessage_init_zero       {""}
 #define meshtastic_MqttClientProxyMessage_init_zero {"", 0, {{0, {0}}}, 0}
 #define meshtastic_MeshPacket_init_zero          {0, 0, 0, 0, {meshtastic_Data_init_zero}, 0, false, 0, 0, 0, 0, _meshtastic_MeshPacket_Priority_MIN, false, 0, _meshtastic_MeshPacket_Delayed_MIN, 0, 0, {0, {0}}, 0, 0, 0, 0, _meshtastic_MeshPacket_TransportMechanism_MIN, 0}
-#define meshtastic_NodeInfo_init_zero            {0, false, meshtastic_User_init_zero, false, meshtastic_Position_init_zero, 0, 0, false, meshtastic_DeviceMetrics_init_zero, 0, 0, false, 0, 0, 0, 0, 0, 0}
+#define meshtastic_NodeInfo_init_zero            {0, false, meshtastic_User_init_zero, false, meshtastic_Position_init_zero, 0, 0, false, meshtastic_DeviceMetrics_init_zero, 0, 0, false, 0, 0, 0, 0, 0, 0, 0}
 #define meshtastic_MyNodeInfo_init_zero          {0, 0, 0, {0, {0}}, "", _meshtastic_FirmwareEdition_MIN, 0}
 #define meshtastic_LogRecord_init_zero           {"", 0, "", _meshtastic_LogRecord_Level_MIN}
 #define meshtastic_QueueStatus_init_zero         {0, 0, 0, 0}
@@ -1935,6 +2067,7 @@ extern "C" {
 #define meshtastic_NodeInfo_is_key_manually_verified_tag 12
 #define meshtastic_NodeInfo_is_muted_tag         13
 #define meshtastic_NodeInfo_has_xeddsa_signed_tag 14
+#define meshtastic_NodeInfo_heard_on_current_lora_tag 15
 #define meshtastic_MyNodeInfo_my_node_num_tag    1
 #define meshtastic_MyNodeInfo_reboot_count_tag   8
 #define meshtastic_MyNodeInfo_min_app_version_tag 11
@@ -2270,7 +2403,8 @@ X(a, STATIC,   SINGULAR, BOOL,     is_favorite,      10) \
 X(a, STATIC,   SINGULAR, BOOL,     is_ignored,       11) \
 X(a, STATIC,   SINGULAR, BOOL,     is_key_manually_verified,  12) \
 X(a, STATIC,   SINGULAR, BOOL,     is_muted,         13) \
-X(a, STATIC,   SINGULAR, BOOL,     has_xeddsa_signed,  14)
+X(a, STATIC,   SINGULAR, BOOL,     has_xeddsa_signed,  14) \
+X(a, STATIC,   SINGULAR, BOOL,     heard_on_current_lora,  15)
 #define meshtastic_NodeInfo_CALLBACK NULL
 #define meshtastic_NodeInfo_DEFAULT NULL
 #define meshtastic_NodeInfo_user_MSGTYPE meshtastic_User
@@ -2638,7 +2772,7 @@ extern const pb_msgdesc_t meshtastic_LeapData_msg;
 #define meshtastic_MyNodeInfo_size               83
 #define meshtastic_NeighborInfo_size             258
 #define meshtastic_Neighbor_size                 22
-#define meshtastic_NodeInfo_size                 327
+#define meshtastic_NodeInfo_size                 329
 #define meshtastic_NodeRemoteHardwarePin_size    29
 #define meshtastic_Position_size                 144
 #define meshtastic_QueueStatus_size              23
