@@ -1558,14 +1558,8 @@ if (decodedState == DecodeState::DECODE_FATAL || decodedState == DecodeState::DE
             logHopStartDrop(*p, "post-decode pre-hop drop");
             cancelSending(p->from, p->id);
             skipHandle = true;
-        } else if (decodedState == DecodeState::DECODE_SUCCESS) {
-            // parsing was successful, queue for our recipient
-            if (src == RX_SRC_LOCAL)
-                printPacket("handleReceived(LOCAL)", p);
-            else if (src == RX_SRC_USER)
-                printPacket("handleReceived(USER)", p);
-            else
-                printPacket("handleReceived(REMOTE)", p);
+        }
+#endif
 
         // Neighbor info module is disabled, ignore expensive neighbor info packets
         if (p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
