@@ -222,6 +222,30 @@ void resetRoutingAuthEvaluationCount()
     }
 }
 #endif
+
+/** Attempt to find a node number among our configured destinations */
+meshtastic_Config_DestinationsConfig_MeshDestination *Router::findDestinationForAddress(uint32_t n, bool leap_only, uint32_t leap_mask)
+{
+    // Disregard reserved addresses
+    if (n < NUM_RESERVED) {
+        return nullptr;
+    }
+
+    meshtastic_Config_DestinationsConfig_MeshDestination *dest = nullptr;
+
+    // Loop through, try to find a destination
+    for (uint16_t i = 0; i < config.destinations.destinations_count; i++) {
+        dest = &config.destinations.destinations[i];
+
+        // if we have a match, finish and return the index as
+        if (n == dest->num) {
+            LOG_DEBUG("Set found destination for node 0x%x at %u", n, i);
+            return dest;
+        }
+    }
+    return nullptr;
+}
+
 /**
  * Constructor
  *
